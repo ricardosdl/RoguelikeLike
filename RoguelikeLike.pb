@@ -47,9 +47,12 @@ Procedure GetTileAdjacentPassableNeighbors(*Tile.TTile, List AdjacentPassableNei
 EndProcedure
 Procedure GetTileConnectedTiles(*Tile.TTile, List ConnectedTiles.i())
   ClearList(ConnectedTiles()) : AddElement(ConnectedTiles()) : ConnectedTiles() = *Tile
-  NewList TilesToCheck.i() : AddElement(TilesToCheck()) : TilesToCheck() = *Tile
-  While(ListSize(TilesToCheck()) > 0)
-    *CurrentTile = TilesToCheck() : DeleteElement(TilesToCheck())
+  NewList TilesToCheck.i() : 
+  AddElement(TilesToCheck()) : 
+  TilesToCheck() = *Tile : 
+  ResetList(TilesToCheck())
+  While(NextElement(TilesToCheck()))
+    *CurrentTile.TTile = TilesToCheck() : FirstElement(TilesToCheck()) : DeleteElement(TilesToCheck())
     NewList PassableNeighbors.i() : GetTileAdjacentPassableNeighbors(*CurrentTile, PassableNeighbors())
     ForEach ConnectedTiles()
       ForEach PassableNeighbors()
@@ -59,12 +62,10 @@ Procedure GetTileConnectedTiles(*Tile.TTile, List ConnectedTiles.i())
       Next
     Next
     NewList CopyPassableNeighBors() : CopyList(PassableNeighbors(), CopyPassableNeighBors())
-    MergeLists(PassableNeighbors(), ConnectedTiles())
-    MergeLists(CopyPassableNeighBors(), TilesToCheck())
+    MergeLists(PassableNeighbors(), ConnectedTiles()) : MergeLists(CopyPassableNeighBors(), TilesToCheck())
+    ResetList(TilesToCheck())
   Wend
 EndProcedure
-
-
 Procedure.a InBounds(x.w, y.w)
   ProcedureReturn Bool(x > 0 And y > 0 And x < NumTiles - 1 And y < NumTiles - 1)
 EndProcedure
@@ -83,9 +84,6 @@ Procedure.u GenerateTiles()
   Next i
   ProcedureReturn NumPassableTiles
 EndProcedure
-Procedure GenerateLevel()
-  GenerateTiles()
-EndProcedure
 Procedure TryTo(Description.s, Callback.CallbackProc)
   For i.u = 1000 To 1 Step -1
     If Callback()
@@ -94,9 +92,6 @@ Procedure TryTo(Description.s, Callback.CallbackProc)
   Next i
   RaiseError(#PB_OnError_IllegalInstruction)
 EndProcedure
-Procedure.l RandomRange(Min.l, Max.l)
-  ProcedureReturn Random(Max, Min)
-EndProcedure
 Procedure GetRandomPassableTile()
   x.w = Random(NumTiles - 1, 0) : y = Random(NumTiles - 1, 0)
   *RandomPassableTile = GetTile(x, y)
@@ -104,7 +99,17 @@ Procedure GetRandomPassableTile()
 EndProcedure
 Procedure.i RandomPassableTile()
   TryTo("get random passable tile", @GetRandomPassableTile())
-  ProcedureReturn RandomPassableTile
+  ProcedureReturn *RandomPassableTile
+EndProcedure
+Procedure GenerateMap()
+  PassableTiles.u = GenerateTiles()
+  *RandomPassableTile = RandomPassableTile() : NewList ConnectedTiles.i()
+  GetTileConnectedTiles(*RandomPassableTile, ConnectedTiles())
+  ProcedureReturn Bool(PassableTiles = ListSize(ConnectedTiles()))
+EndProcedure
+Procedure GenerateLevel()
+  ;GenerateTiles()
+  TryTo("generate map", @GenerateMap())
 EndProcedure
 Procedure PlaySoundEffect(Sound.a)
   If SoundInitiated And Not SoundMuted
@@ -122,7 +127,7 @@ Procedure StartGame(IsNextLevel.b)
     FlipBuffers()
   CompilerEndIf
   GenerateLevel()
-  RandomPassableTile()
+  *RandomPassableTile.TTile = RandomPassableTile()
   PlayerX = *RandomPassableTile\x : PLayerY = *RandomPassableTile\y
 EndProcedure
 Procedure DrawBitmapText(x.f, y.f, Text.s, CharWidthPx.a = 16, CharHeightPx.a = 24);draw text is too slow on linux, let's try to use bitmap fonts
