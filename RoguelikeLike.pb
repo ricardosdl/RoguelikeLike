@@ -19,10 +19,57 @@ EndProcedure
 Procedure DrawTile(*Tile.TTile)
   DrawSprite(*Tile\Sprite, *Tile\x, *Tile\y)
 EndProcedure
+Procedure.i GetTile(x.w, y.w)
+  If (x < 0 Or x > NumTiles - 1) Or (y < 0 Or y > NumTiles -1)
+    ProcedureReturn #Null
+  EndIf
+  ProcedureReturn @Tiles(x, y)
+EndProcedure
+Procedure.i GetTileNeighbor(*Tile.TTile, Dx.w, Dy.w)
+  ProcedureReturn GetTile(*Tile\x + Dx, *Tile\y + Dy)
+EndProcedure
+Procedure GetTileAdjacentNeighbors(*Tile.TTile, List AdjacentNeighbors.i())
+  ClearList(AdjacentNeighbors())
+  AddElement(AdjacentNeighbors()) : AdjacentNeighbors() = GetTileNeighbor(*Tile, 0, -1)
+  AddElement(AdjacentNeighbors()) : AdjacentNeighbors() = GetTileNeighbor(*Tile, 0, 1)
+  AddElement(AdjacentNeighbors()) : AdjacentNeighbors() = GetTileNeighbor(*Tile, -1, 0)
+  AddElement(AdjacentNeighbors()) : AdjacentNeighbors() = GetTileNeighbor(*Tile, 1, 0)
+EndProcedure
+Procedure GetTileAdjacentPassableNeighbors(*Tile.TTile, List AdjacentPassableNeighbors.i())
+  Define NewList AdjacentNeighbors.i() : ClearList(AdjacentPassableNeighbors())
+  GetTileAdjacentNeighbors(*Tile, AdjacentNeighbors())
+  ForEach AdjacentNeighbors() : *AdjacentNeighbor.TTile = AdjacentNeighbors()
+    If *AdjacentNeighbor = #Null : Continue : EndIf
+    If *AdjacentNeighbor\Passable
+      AddElement(AdjacentPassableNeighbors()) : AdjacentPassableNeighbors() = *AdjacentNeighbor
+    EndIf
+  Next
+EndProcedure
+Procedure GetTileConnectedTiles(*Tile.TTile, List ConnectedTiles.i())
+  ClearList(ConnectedTiles()) : AddElement(ConnectedTiles()) : ConnectedTiles() = *Tile
+  NewList TilesToCheck.i() : AddElement(TilesToCheck()) : TilesToCheck() = *Tile
+  While(ListSize(TilesToCheck()) > 0)
+    *CurrentTile = TilesToCheck() : DeleteElement(TilesToCheck())
+    NewList PassableNeighbors.i() : GetTileAdjacentPassableNeighbors(*CurrentTile, PassableNeighbors())
+    ForEach ConnectedTiles()
+      ForEach PassableNeighbors()
+        If PassableNeighbors() = ConnectedTiles()
+          DeleteElement(PassableNeighbors())
+        EndIf
+      Next
+    Next
+    NewList CopyPassableNeighBors() : CopyList(PassableNeighbors(), CopyPassableNeighBors())
+    MergeLists(PassableNeighbors(), ConnectedTiles())
+    MergeLists(CopyPassableNeighBors(), TilesToCheck())
+  Wend
+EndProcedure
+
+
 Procedure.a InBounds(x.w, y.w)
   ProcedureReturn Bool(x > 0 And y > 0 And x < NumTiles - 1 And y < NumTiles - 1)
 EndProcedure
-Procedure GenerateTiles()
+Procedure.u GenerateTiles()
+  NumPassableTiles.u = 0
   For i.w = 0 To NumTiles - 1
     For j.w = 0 To NumTiles - 1
       If (Random(100, 0) / 100.0 < 0.3) Or (Not InBounds(i, j))
@@ -30,10 +77,11 @@ Procedure GenerateTiles()
         Tiles(i, j)\TileType = #Wall
       Else
         Tiles(i, j)\x = i : Tiles(i, j)\y = j : Tiles(i, j)\Sprite = #SpriteFloor : Tiles(i, j)\Passable = #True
-        Tiles(i, j)\TileType = #Floor
+        Tiles(i, j)\TileType = #Floor : NumPassableTiles + 1
       EndIf
     Next j
   Next i
+  ProcedureReturn NumPassableTiles
 EndProcedure
 Procedure GenerateLevel()
   GenerateTiles()
@@ -48,12 +96,6 @@ Procedure TryTo(Description.s, Callback.CallbackProc)
 EndProcedure
 Procedure.l RandomRange(Min.l, Max.l)
   ProcedureReturn Random(Max, Min)
-EndProcedure
-Procedure.i GetTile(x.w, y.w)
-  If (x < 0 Or x > NumTiles - 1) Or (y < 0 Or y > NumTiles -1)
-    ProcedureReturn #Null
-  EndIf
-  ProcedureReturn @Tiles(x, y)
 EndProcedure
 Procedure GetRandomPassableTile()
   x.w = Random(NumTiles - 1, 0) : y = Random(NumTiles - 1, 0)
