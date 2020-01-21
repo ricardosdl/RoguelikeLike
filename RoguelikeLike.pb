@@ -1,13 +1,14 @@
 ﻿Enumeration TileTypes : #Floor : #Wall : EndEnumeration
 Structure TTile
-  x.w : y.w : Sprite.u : Passable.a : TileType.a
+  x.w : y.w : Sprite.u : Passable.a : TileType.a : Monster.i
 EndStructure
 Enumeration GameResources : #SpriteSheet :  EndEnumeration
 Enumeration GameSprites : #Player : #PlayerDeath : #SpriteFloor : #SpriteWall  : EndEnumeration
+Prototype.a CallBackProc();our callback prototype
 Global PlayerX.w = 0, PlayerY.w = 0
 Global TileSize.a = 64, NumTiles.u = 9, UIWidth.u = 4, GameWidth.u = TileSize * (NumTiles + UIWidth), GameHeight.u = TileSize * NumTiles,ExitGame.a = #False, SoundMuted.a = #False
 Global BasePath.s = "data" + #PS$, ElapsedTimneInS.f, LastTimeInMs.q
-Global Dim Tiles.TTile(NumTiles - 1, NumTiles - 1)
+Global Dim Tiles.TTile(NumTiles - 1, NumTiles - 1), *RandomPassableTile.TTile
 
 Procedure LoadSprites()
   LoadSprite(#SpriteSheet, BasePath + "graphics" + #PS$ + "spritesheet.png")
@@ -40,11 +41,31 @@ EndProcedure
 Procedure GenerateLevel()
   GenerateTiles()
 EndProcedure
+Procedure TryTo(Description.s, Callback.CallbackProc)
+  For i.u = 1000 To 1 Step -1
+    If Callback()
+      ProcedureReturn
+    EndIf
+  Next i
+  RaiseError(#PB_OnError_IllegalInstruction)
+EndProcedure
+Procedure.l RandomRange(Min.l, Max.l)
+  ProcedureReturn Random(Max, Min)
+EndProcedure
 Procedure.i GetTile(x.w, y.w)
   If (x < 0 Or x > NumTiles - 1) Or (y < 0 Or y > NumTiles -1)
     ProcedureReturn #Null
   EndIf
   ProcedureReturn @Tiles(x, y)
+EndProcedure
+Procedure GetRandomPassableTile()
+  x.w = Random(NumTiles - 1, 0) : y = Random(NumTiles - 1, 0)
+  *RandomPassableTile = GetTile(x, y)
+  ProcedureReturn Bool(*RandomPassableTile\Passable And Not *RandomPassableTile\Monster)
+EndProcedure
+Procedure.i RandomPassableTile()
+  TryTo("get random passable tile", @GetRandomPassableTile())
+  ProcedureReturn RandomPassableTile
 EndProcedure
 Procedure PlaySoundEffect(Sound.a)
   If SoundInitiated And Not SoundMuted
@@ -68,6 +89,8 @@ Procedure StartGame(IsNextLevel.b)
     FlipBuffers()
   CompilerEndIf
   GenerateLevel()
+  RandomPassableTile()
+  PlayerX = *RandomPassableTile\x : PLayerY = *RandomPassableTile\y
 EndProcedure
 Procedure DrawBitmapText(x.f, y.f, Text.s, CharWidthPx.a = 16, CharHeightPx.a = 24);draw text is too slow on linux, let's try to use bitmap fonts
   ClipSprite(Bitmap_Font_Sprite, #PB_Default, #PB_Default, #PB_Default, #PB_Default)
