@@ -12,9 +12,6 @@ Global Dim Tiles.TTile(NumTiles - 1, NumTiles - 1), *RandomPassableTile.TTile
 
 Procedure LoadSprites()
   LoadSprite(#SpriteSheet, BasePath + "graphics" + #PS$ + "spritesheet.png")
-  ;LoadSprite(#Brick, BasePath + "brick.bmp") : LoadSprite(#PaddleH, BasePath + "horizontal-paddle.bmp")
-  ;LoadSprite(#PaddleV, BasePath + "vertical-paddle.bmp") : LoadSprite(#Ball, BasePath + "ball.bmp")
-  ;Bitmap_Font_Sprite = LoadSprite(#PB_Any, BasePath + "font.png") : Pause_Background_Sprite = LoadSprite(#PB_Any, BasePath + "pause-background.png")
 EndProcedure
 Procedure DrawSprite(SpriteIndex.u, x.l, y.l)
   ClipSprite(#SpriteSheet, SpriteIndex * 16, 0, 16, 16) : ZoomSprite(#SpriteSheet, TileSize, TileSize) : DisplayTransparentSprite(#SpriteSheet, x * TileSize, y * TileSize)
@@ -74,12 +71,6 @@ Procedure PlaySoundEffect(Sound.a)
 EndProcedure
 Procedure LoadSounds()
   If SoundInitiated
-    ;LoadSound(#Lost_Life, BasePath + "lost_life.wav")
-    ;LoadSound(#Game_Over, BasePath + "game_over.wav")
-    ;LoadSound(#Brick_Break, BasePath + "brick_break.wav")
-    ;If LoadSound(#Ball_Touch, BasePath + "ball_touch.wav")
-    ;  PlaySoundEffect(#Ball_Touch);on windows the first call to playsound is taking over a second to complete, so we call it here to get over it
-    ;EndIf
   EndIf
 EndProcedure
 Declare RenderFrame()
