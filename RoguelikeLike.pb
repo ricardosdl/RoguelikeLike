@@ -1,13 +1,13 @@
 ﻿Enumeration TileTypes : #Floor : #Wall : EndEnumeration
-Structure Tile
+Structure TTile
   x.w : y.w : Sprite.u : Passable.a : TileType.a
 EndStructure
 Enumeration GameResources : #SpriteSheet :  EndEnumeration
-Enumeration GameSprites : #Player : #PlayerDeath : EndEnumeration
+Enumeration GameSprites : #Player : #PlayerDeath : #SpriteFloor : #SpriteWall  : EndEnumeration
 Global PlayerX.w = 0, PlayerY.w = 0
 Global TileSize.a = 64, NumTiles.u = 9, UIWidth.u = 4, GameWidth.u = TileSize * (NumTiles + UIWidth), GameHeight.u = TileSize * NumTiles,ExitGame.a = #False, SoundMuted.a = #False
 Global BasePath.s = "data" + #PS$, ElapsedTimneInS.f, LastTimeInMs.q
-Global Tiles
+Global Dim Tiles.TTile(NumTiles - 1, NumTiles - 1)
 
 Procedure LoadSprites()
   LoadSprite(#SpriteSheet, BasePath + "graphics" + #PS$ + "spritesheet.png")
@@ -18,11 +18,33 @@ EndProcedure
 Procedure DrawSprite(SpriteIndex.u, x.l, y.l)
   ClipSprite(#SpriteSheet, SpriteIndex * 16, 0, 16, 16) : ZoomSprite(#SpriteSheet, TileSize, TileSize) : DisplayTransparentSprite(#SpriteSheet, x * TileSize, y * TileSize)
 EndProcedure
+Procedure DrawTile(*Tile.TTile)
+  DrawSprite(*Tile\Sprite, *Tile\x, *Tile\y)
+EndProcedure
+Procedure.a InBounds(x.w, y.w)
+  ProcedureReturn Bool(x > 0 And y > 0 And x < NumTiles - 1 And y < NumTiles - 1)
+EndProcedure
 Procedure GenerateTiles()
-  
+  For i.w = 0 To NumTiles - 1
+    For j.w = 0 To NumTiles - 1
+      If (Random(100, 0) / 100.0 < 0.3) Or (Not InBounds(i, j))
+        Tiles(i, j)\x = i : Tiles(i, j)\y = j : Tiles(i, j)\Sprite = #SpriteWall : Tiles(i, j)\Passable = #False
+        Tiles(i, j)\TileType = #Wall
+      Else
+        Tiles(i, j)\x = i : Tiles(i, j)\y = j : Tiles(i, j)\Sprite = #SpriteFloor : Tiles(i, j)\Passable = #True
+        Tiles(i, j)\TileType = #Floor
+      EndIf
+    Next j
+  Next i
 EndProcedure
 Procedure GenerateLevel()
   GenerateTiles()
+EndProcedure
+Procedure.i GetTile(x.w, y.w)
+  If (x < 0 Or x > NumTiles - 1) Or (y < 0 Or y > NumTiles -1)
+    ProcedureReturn #Null
+  EndIf
+  ProcedureReturn @Tiles(x, y)
 EndProcedure
 Procedure PlaySoundEffect(Sound.a)
   If SoundInitiated And Not SoundMuted
@@ -39,18 +61,13 @@ Procedure LoadSounds()
     ;EndIf
   EndIf
 EndProcedure
-Procedure CreateBricks(NumCols.i, NumLines.i, Offset.f = 5)
-EndProcedure
-Procedure CreatePaddles()
-EndProcedure
-Procedure CreateBall(StartX.f, StartY.f, VelX.f = 0, VelY.f = 0)
-EndProcedure
 Declare RenderFrame()
 Procedure StartGame(IsNextLevel.b)
   CompilerIf #PB_Compiler_Processor = #PB_Processor_JavaScript
     BindEvent(#PB_Event_RenderFrame, @RenderFrame())
     FlipBuffers()
   CompilerEndIf
+  GenerateLevel()
 EndProcedure
 Procedure DrawBitmapText(x.f, y.f, Text.s, CharWidthPx.a = 16, CharHeightPx.a = 24);draw text is too slow on linux, let's try to use bitmap fonts
   ClipSprite(Bitmap_Font_Sprite, #PB_Default, #PB_Default, #PB_Default, #PB_Default)
@@ -98,8 +115,17 @@ CompilerIf #PB_Compiler_Processor = #PB_Processor_JavaScript
   BindEvent(#PB_Event_Loading, @Loading()) : BindEvent(#PB_Event_LoadingError, @LoadingError())
 CompilerEndIf
 Procedure Draw()
-  ClearScreen(RGB(0,0,0)) : DrawSprite(#Player, PlayerX, PlayerY) : DrawHUD()
-  ;DisplayTransparentSprite(#SpriteSheet, 0, 0)
+  ClearScreen(RGB(0,0,0))
+  For i.w = 0 To NumTiles - 1
+    For j.w = 0 To NumTiles - 1
+      *Tile.TTile = GetTile(i, j)
+      If *Tile = #Null : Continue;the tile is out of the visible screen
+      Else
+        DrawTile(*Tile)
+      EndIf
+    Next j
+  Next i
+  DrawSprite(#Player, PlayerX, PlayerY) : DrawHUD()
 EndProcedure
 Procedure RenderFrame()
   ElapsedTimneInS = (ElapsedMilliseconds() - LastTimeInMs) / 1000.0
