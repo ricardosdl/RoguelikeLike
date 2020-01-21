@@ -108,7 +108,6 @@ Procedure GenerateMap()
   ProcedureReturn Bool(PassableTiles = ListSize(ConnectedTiles()))
 EndProcedure
 Procedure GenerateLevel()
-  ;GenerateTiles()
   TryTo("generate map", @GenerateMap())
 EndProcedure
 Procedure PlaySoundEffect(Sound.a)
