@@ -1,6 +1,6 @@
 ﻿Enumeration TileTypes : #Floor : #Wall : EndEnumeration
 Structure TTile
-  x.w : y.w : Sprite.u : Passable.a : TileType.a : Monster.i
+  x.w : y.w : Sprite.u : Passable.a : TileType.a : *Monster.TMonster
 EndStructure
 Enumeration MonsterTypes : #Player : #Bird : #Snake : #Tank : #Eater : #Jester : EndEnumeration
 Structure TMonster
@@ -83,8 +83,7 @@ Procedure DoMonsterStuff(*Monster.TMonster)
   NewList AdjacentPassableNeighbors.i()
   GetTileAdjacentPassableNeighbors(*Monster\Tile, AdjacentPassableNeighbors())
   ForEach AdjacentPassableNeighbors() : *CurrentTile.TTile = AdjacentPassableNeighbors()
-    *CurrentTileMonster.TMonster = *CurrentTile\Monster
-    If *CurrentTileMonster = #Null Or *CurrentTileMonster\MonsterType = #Player
+    If *CurrentTile\Monster = #Null Or *CurrentTile\Monster\MonsterType = #Player
       Continue
     Else
       DeleteElement(AdjacentPassableNeighbors())
