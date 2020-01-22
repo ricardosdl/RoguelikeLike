@@ -2,7 +2,7 @@
 Structure TTile
   x.w : y.w : Sprite.u : Passable.a : TileType.a : Monster.i
 EndStructure
-Enumeration MonsterTypes : #Player : EndEnumeration
+Enumeration MonsterTypes : #Player : #Bird : #Snake : #Tank : #Eater : #Jester : EndEnumeration
 Structure TMonster
   *Tile.TTile : Sprite.u : Hp.b : MonsterType.a
 EndStructure
@@ -13,7 +13,7 @@ Global PlayerX.w = 0, PlayerY.w = 0
 Global TileSize.a = 64, NumTiles.u = 9, UIWidth.u = 4, GameWidth.u = TileSize * (NumTiles + UIWidth), GameHeight.u = TileSize * NumTiles,ExitGame.a = #False, SoundMuted.a = #False
 Global BasePath.s = "data" + #PS$, ElapsedTimneInS.f, LastTimeInMs.q
 Global Dim Tiles.TTile(NumTiles - 1, NumTiles - 1), *RandomPassableTile.TTile
-Global Player.TMonster
+Global Level.a, Player.TMonster, NewList Monsters.TMonster()
 
 Procedure LoadSprites()
   LoadSprite(#SpriteSheet, BasePath + "graphics" + #PS$ + "spritesheet.png")
@@ -28,14 +28,52 @@ EndProcedure
 Procedure InitMonster(*Monster.TMonster, *Tile.TTile, Sprite.u, Hp.b)
   MoveMonster(*Monster, *Tile) : *Monster\Sprite = Sprite : *Monster\Hp = Hp
 EndProcedure
-Procedure InitPlayer(*Player.TMonster, *Tile.TTile, Sprite.u, Hp.b)
-  InitMonster(*Player, *Tile, Sprite, Hp) : *Player\MonsterType = #Player
+Procedure.i InitAMonster(*Tile.TTile, MonsterType.a)
+  AddElement(Monsters())
+  Select MonsterType
+    Case #Player
+    Case #Bird : InitMonster(@Monsters(), *Tile, 4, 3)
+    Case #Snake : InitMonster(@Monsters(), *Tile, 5, 1)
+    Case #Tank : InitMonster(@Monsters(), *Tile, 6, 2)
+    Case #Eater : InitMonster(@Monsters(), *Tile, 7, 1)
+    Case #Jester : InitMonster(@Monsters(), *Tile, 8, 2)
+  EndSelect
+  ProcedureReturn @Monsters()
+EndProcedure
+Procedure TryTo(Description.s, Callback.CallbackProc)
+  For i.u = 1000 To 1 Step -1
+    If Callback()
+      ProcedureReturn
+    EndIf
+  Next i
+  RaiseError(#PB_OnError_IllegalInstruction)
 EndProcedure
 Procedure.i GetTile(x.w, y.w)
   If (x < 0 Or x > NumTiles - 1) Or (y < 0 Or y > NumTiles -1)
     ProcedureReturn #Null
   EndIf
   ProcedureReturn @Tiles(x, y)
+EndProcedure
+Procedure GetRandomPassableTile()
+  x.w = Random(NumTiles - 1, 0) : y = Random(NumTiles - 1, 0)
+  *RandomPassableTile = GetTile(x, y)
+  ProcedureReturn Bool(*RandomPassableTile\Passable And Not *RandomPassableTile\Monster)
+EndProcedure
+Procedure.i RandomPassableTile()
+  TryTo("get random passable tile", @GetRandomPassableTile())
+  ProcedureReturn *RandomPassableTile
+EndProcedure
+Procedure.i SpawnMonster()
+  ProcedureReturn InitAMonster(RandomPassableTile(), Random(#Jester, #Bird))
+EndProcedure
+Procedure GenerateMonsters()
+  NumMonsters.u = Level + 1
+  For i.u = 1 To NumMonsters
+    SpawnMonster()
+  Next i
+EndProcedure
+Procedure InitPlayer(*Player.TMonster, *Tile.TTile, Sprite.u, Hp.b)
+  InitMonster(*Player, *Tile, Sprite, Hp) : *Player\MonsterType = #Player
 EndProcedure
 Procedure.i GetTileNeighbor(*Tile.TTile, Dx.w, Dy.w)
   ProcedureReturn GetTile(*Tile\x + Dx, *Tile\y + Dy)
@@ -109,23 +147,6 @@ Procedure.u GenerateTiles()
   Next i
   ProcedureReturn NumPassableTiles
 EndProcedure
-Procedure TryTo(Description.s, Callback.CallbackProc)
-  For i.u = 1000 To 1 Step -1
-    If Callback()
-      ProcedureReturn
-    EndIf
-  Next i
-  RaiseError(#PB_OnError_IllegalInstruction)
-EndProcedure
-Procedure GetRandomPassableTile()
-  x.w = Random(NumTiles - 1, 0) : y = Random(NumTiles - 1, 0)
-  *RandomPassableTile = GetTile(x, y)
-  ProcedureReturn Bool(*RandomPassableTile\Passable And Not *RandomPassableTile\Monster)
-EndProcedure
-Procedure.i RandomPassableTile()
-  TryTo("get random passable tile", @GetRandomPassableTile())
-  ProcedureReturn *RandomPassableTile
-EndProcedure
 Procedure GenerateMap()
   PassableTiles.u = GenerateTiles()
   *RandomPassableTile = RandomPassableTile() : NewList ConnectedTiles.i()
@@ -134,6 +155,7 @@ Procedure GenerateMap()
 EndProcedure
 Procedure GenerateLevel()
   TryTo("generate map", @GenerateMap())
+  GenerateMonsters()
 EndProcedure
 Procedure PlaySoundEffect(Sound.a)
   If SoundInitiated And Not SoundMuted
@@ -150,7 +172,7 @@ Procedure StartGame(IsNextLevel.b)
     BindEvent(#PB_Event_RenderFrame, @RenderFrame())
     FlipBuffers()
   CompilerEndIf
-  GenerateLevel()
+  Level = 1 : GenerateLevel()
   *RandomPassableTile.TTile = RandomPassableTile()
   InitPlayer(@Player, *RandomPassableTile, #SpritePlayer, 3)
 EndProcedure
@@ -209,6 +231,9 @@ Procedure Draw()
       EndIf
     Next j
   Next i
+  ForEach Monsters()
+    DrawSprite(Monsters()\Sprite, Monsters()\Tile\x, Monsters()\Tile\y)
+  Next
   DrawSprite(#SpritePlayer, Player\Tile\x, Player\Tile\y) : DrawHUD()
 EndProcedure
 Procedure RenderFrame()
