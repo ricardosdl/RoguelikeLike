@@ -40,6 +40,70 @@ Procedure.i InitAMonster(*Tile.TTile, MonsterType.a)
   EndSelect
   ProcedureReturn @Monsters()
 EndProcedure
+Procedure.i GetTile(x.w, y.w)
+  If (x < 0 Or x > NumTiles - 1) Or (y < 0 Or y > NumTiles -1)
+    ProcedureReturn #Null
+  EndIf
+  ProcedureReturn @Tiles(x, y)
+EndProcedure
+Procedure.a GetTileDistance(*TileA.TTile, *TileB.TTile)
+  ProcedureReturn Abs(*TileA\x - *TileB\x) + Abs(*TileA\y - *TileB\y)
+EndProcedure
+Procedure.i GetTileNeighbor(*Tile.TTile, Dx.w, Dy.w)
+  ProcedureReturn GetTile(*Tile\x + Dx, *Tile\y + Dy)
+EndProcedure
+Procedure GetTileAdjacentNeighbors(*Tile.TTile, List AdjacentNeighbors.i())
+  ClearList(AdjacentNeighbors())
+  AddElement(AdjacentNeighbors()) : AdjacentNeighbors() = GetTileNeighbor(*Tile, 0, -1)
+  AddElement(AdjacentNeighbors()) : AdjacentNeighbors() = GetTileNeighbor(*Tile, 0, 1)
+  AddElement(AdjacentNeighbors()) : AdjacentNeighbors() = GetTileNeighbor(*Tile, -1, 0)
+  AddElement(AdjacentNeighbors()) : AdjacentNeighbors() = GetTileNeighbor(*Tile, 1, 0)
+EndProcedure
+Procedure GetTileAdjacentPassableNeighbors(*Tile.TTile, List AdjacentPassableNeighbors.i())
+  Define NewList AdjacentNeighbors.i() : ClearList(AdjacentPassableNeighbors())
+  GetTileAdjacentNeighbors(*Tile, AdjacentNeighbors())
+  ForEach AdjacentNeighbors() : *AdjacentNeighbor.TTile = AdjacentNeighbors()
+    If *AdjacentNeighbor = #Null : Continue : EndIf
+    If *AdjacentNeighbor\Passable
+      AddElement(AdjacentPassableNeighbors()) : AdjacentPassableNeighbors() = *AdjacentNeighbor
+    EndIf
+  Next
+EndProcedure
+Procedure.a TryMonsterMove(*Monster.TMonster, Dx.w, Dy.w)
+  *NewTile.TTile = GetTileNeighbor(*Monster\Tile, Dx, Dy)
+  If *NewTile <> #Null And *NewTile\Passable
+    If *NewTile\Monster = #Null
+      MoveMonster(*Monster, *NewTile)
+    EndIf
+    ProcedureReturn #True
+  EndIf
+  ProcedureReturn #False
+EndProcedure
+Procedure DoMonsterStuff(*Monster.TMonster)
+  NewList AdjacentPassableNeighbors.i()
+  GetTileAdjacentPassableNeighbors(*Monster\Tile, AdjacentPassableNeighbors())
+  ForEach AdjacentPassableNeighbors() : *CurrentTile.TTile = AdjacentPassableNeighbors()
+    *CurrentTileMonster.TMonster = *CurrentTile\Monster
+    If *CurrentTileMonster = #Null Or *CurrentTileMonster\MonsterType = #Player
+      Continue
+    Else
+      DeleteElement(AdjacentPassableNeighbors())
+    EndIf
+  Next
+  ResetList(AdjacentPassableNeighbors())
+  If ListSize(AdjacentPassableNeighbors()) > 0
+    SmallestDistance.w = NumTiles * NumTiles : *ClosestPassableTile.TTile = #Null
+    ForEach AdjacentPassableNeighbors() : *CurrentTile.TTile = AdjacentPassableNeighbors()
+      If GetTileDistance(*CurrentTile, Player\Tile) < SmallestDistance
+        *ClosestPassableTile = *CurrentTile
+      EndIf
+    Next
+    TryMonsterMove(*Monster, *ClosestPassableTile\x - *Monster\Tile\x, *ClosestPassableTile\y - *Monster\Tile\y)
+  EndIf
+EndProcedure
+Procedure UpdateMonster(*Monster.TMonster)
+  
+EndProcedure
 Procedure TryTo(Description.s, Callback.CallbackProc)
   For i.u = 1000 To 1 Step -1
     If Callback()
@@ -47,12 +111,6 @@ Procedure TryTo(Description.s, Callback.CallbackProc)
     EndIf
   Next i
   RaiseError(#PB_OnError_IllegalInstruction)
-EndProcedure
-Procedure.i GetTile(x.w, y.w)
-  If (x < 0 Or x > NumTiles - 1) Or (y < 0 Or y > NumTiles -1)
-    ProcedureReturn #Null
-  EndIf
-  ProcedureReturn @Tiles(x, y)
 EndProcedure
 Procedure GetRandomPassableTile()
   x.w = Random(NumTiles - 1, 0) : y = Random(NumTiles - 1, 0)
@@ -75,38 +133,8 @@ EndProcedure
 Procedure InitPlayer(*Player.TMonster, *Tile.TTile, Sprite.u, Hp.b)
   InitMonster(*Player, *Tile, Sprite, Hp) : *Player\MonsterType = #Player
 EndProcedure
-Procedure.i GetTileNeighbor(*Tile.TTile, Dx.w, Dy.w)
-  ProcedureReturn GetTile(*Tile\x + Dx, *Tile\y + Dy)
-EndProcedure
-Procedure.a TryMonsterMove(*Monster.TMonster, Dx.w, Dy.w)
-  *NewTile.TTile = GetTileNeighbor(*Monster\Tile, Dx, Dy)
-  If *NewTile <> #Null And *NewTile\Passable
-    If *NewTile\Monster = #Null
-      MoveMonster(*Monster, *NewTile)
-    EndIf
-    ProcedureReturn #True
-  EndIf
-  ProcedureReturn #False
-EndProcedure
 Procedure DrawTile(*Tile.TTile)
   DrawSprite(*Tile\Sprite, *Tile\x, *Tile\y)
-EndProcedure
-Procedure GetTileAdjacentNeighbors(*Tile.TTile, List AdjacentNeighbors.i())
-  ClearList(AdjacentNeighbors())
-  AddElement(AdjacentNeighbors()) : AdjacentNeighbors() = GetTileNeighbor(*Tile, 0, -1)
-  AddElement(AdjacentNeighbors()) : AdjacentNeighbors() = GetTileNeighbor(*Tile, 0, 1)
-  AddElement(AdjacentNeighbors()) : AdjacentNeighbors() = GetTileNeighbor(*Tile, -1, 0)
-  AddElement(AdjacentNeighbors()) : AdjacentNeighbors() = GetTileNeighbor(*Tile, 1, 0)
-EndProcedure
-Procedure GetTileAdjacentPassableNeighbors(*Tile.TTile, List AdjacentPassableNeighbors.i())
-  Define NewList AdjacentNeighbors.i() : ClearList(AdjacentPassableNeighbors())
-  GetTileAdjacentNeighbors(*Tile, AdjacentNeighbors())
-  ForEach AdjacentNeighbors() : *AdjacentNeighbor.TTile = AdjacentNeighbors()
-    If *AdjacentNeighbor = #Null : Continue : EndIf
-    If *AdjacentNeighbor\Passable
-      AddElement(AdjacentPassableNeighbors()) : AdjacentPassableNeighbors() = *AdjacentNeighbor
-    EndIf
-  Next
 EndProcedure
 Procedure GetTileConnectedTiles(*Tile.TTile, List ConnectedTiles.i())
   ClearList(ConnectedTiles()) : AddElement(ConnectedTiles()) : ConnectedTiles() = *Tile
@@ -235,6 +263,15 @@ Procedure Draw()
     DrawSprite(Monsters()\Sprite, Monsters()\Tile\x, Monsters()\Tile\y)
   Next
   DrawSprite(#SpritePlayer, Player\Tile\x, Player\Tile\y) : DrawHUD()
+EndProcedure
+Procedure Tick()
+  ForEach Monsters()
+    If Monsters()\hp > 0
+      UpdateMonster(@Monsters())
+    Else
+      DeleteElement(Monsters())
+    EndIf
+  Next
 EndProcedure
 Procedure RenderFrame()
   ElapsedTimneInS = (ElapsedMilliseconds() - LastTimeInMs) / 1000.0
