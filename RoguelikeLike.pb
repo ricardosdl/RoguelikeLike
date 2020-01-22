@@ -2,13 +2,18 @@
 Structure TTile
   x.w : y.w : Sprite.u : Passable.a : TileType.a : Monster.i
 EndStructure
+Enumeration MonsterTypes : #Player : EndEnumeration
+Structure TMonster
+  *Tile.TTile : Sprite.u : Hp.b : MonsterType.a
+EndStructure
 Enumeration GameResources : #SpriteSheet :  EndEnumeration
-Enumeration GameSprites : #Player : #PlayerDeath : #SpriteFloor : #SpriteWall  : EndEnumeration
+Enumeration GameSprites : #SpritePlayer : #PlayerDeath : #SpriteFloor : #SpriteWall  : EndEnumeration
 Prototype.a CallBackProc();our callback prototype
 Global PlayerX.w = 0, PlayerY.w = 0
 Global TileSize.a = 64, NumTiles.u = 9, UIWidth.u = 4, GameWidth.u = TileSize * (NumTiles + UIWidth), GameHeight.u = TileSize * NumTiles,ExitGame.a = #False, SoundMuted.a = #False
 Global BasePath.s = "data" + #PS$, ElapsedTimneInS.f, LastTimeInMs.q
 Global Dim Tiles.TTile(NumTiles - 1, NumTiles - 1), *RandomPassableTile.TTile
+Global Player.TMonster
 
 Procedure LoadSprites()
   LoadSprite(#SpriteSheet, BasePath + "graphics" + #PS$ + "spritesheet.png")
@@ -16,8 +21,15 @@ EndProcedure
 Procedure DrawSprite(SpriteIndex.u, x.l, y.l)
   ClipSprite(#SpriteSheet, SpriteIndex * 16, 0, 16, 16) : ZoomSprite(#SpriteSheet, TileSize, TileSize) : DisplayTransparentSprite(#SpriteSheet, x * TileSize, y * TileSize)
 EndProcedure
-Procedure DrawTile(*Tile.TTile)
-  DrawSprite(*Tile\Sprite, *Tile\x, *Tile\y)
+Procedure MoveMonster(*Monster.TMonster, *NewTile.TTile)
+  If *Monster\Tile <> #Null : *Monster\Tile\Monster = #Null : EndIf
+  *Monster\Tile = *NewTile : *NewTile\Monster = *Monster
+EndProcedure
+Procedure InitMonster(*Monster.TMonster, *Tile.TTile, Sprite.u, Hp.b)
+  MoveMonster(*Monster, *Tile) : *Monster\Sprite = Sprite : *Monster\Hp = Hp
+EndProcedure
+Procedure InitPlayer(*Player.TMonster, *Tile.TTile, Sprite.u, Hp.b)
+  InitMonster(*Player, *Tile, Sprite, Hp) : *Player\MonsterType = #Player
 EndProcedure
 Procedure.i GetTile(x.w, y.w)
   If (x < 0 Or x > NumTiles - 1) Or (y < 0 Or y > NumTiles -1)
@@ -27,6 +39,19 @@ Procedure.i GetTile(x.w, y.w)
 EndProcedure
 Procedure.i GetTileNeighbor(*Tile.TTile, Dx.w, Dy.w)
   ProcedureReturn GetTile(*Tile\x + Dx, *Tile\y + Dy)
+EndProcedure
+Procedure.a TryMonsterMove(*Monster.TMonster, Dx.w, Dy.w)
+  *NewTile.TTile = GetTileNeighbor(*Monster\Tile, Dx, Dy)
+  If *NewTile <> #Null And *NewTile\Passable
+    If *NewTile\Monster = #Null
+      MoveMonster(*Monster, *NewTile)
+    EndIf
+    ProcedureReturn #True
+  EndIf
+  ProcedureReturn #False
+EndProcedure
+Procedure DrawTile(*Tile.TTile)
+  DrawSprite(*Tile\Sprite, *Tile\x, *Tile\y)
 EndProcedure
 Procedure GetTileAdjacentNeighbors(*Tile.TTile, List AdjacentNeighbors.i())
   ClearList(AdjacentNeighbors())
@@ -127,7 +152,7 @@ Procedure StartGame(IsNextLevel.b)
   CompilerEndIf
   GenerateLevel()
   *RandomPassableTile.TTile = RandomPassableTile()
-  PlayerX = *RandomPassableTile\x : PLayerY = *RandomPassableTile\y
+  InitPlayer(@Player, *RandomPassableTile, #SpritePlayer, 3)
 EndProcedure
 Procedure DrawBitmapText(x.f, y.f, Text.s, CharWidthPx.a = 16, CharHeightPx.a = 24);draw text is too slow on linux, let's try to use bitmap fonts
   ClipSprite(Bitmap_Font_Sprite, #PB_Default, #PB_Default, #PB_Default, #PB_Default)
@@ -143,11 +168,10 @@ Procedure DrawHUD()
 EndProcedure
 
 Procedure UpdateKeyBoard(Elapsed.f)
-  If KeyboardReleased(#PB_Key_W) : PlayerY - 1 : EndIf
-  If KeyboardReleased(#PB_Key_S) : PlayerY + 1 : EndIf
-  If KeyboardReleased(#PB_Key_A) : PlayerX - 1 : EndIf
-  If KeyboardReleased(#PB_Key_D) : PLayerX + 1 : EndIf
-    
+  If KeyboardReleased(#PB_Key_W) : TryMonsterMove(@Player, 0, -1) : EndIf
+  If KeyboardReleased(#PB_Key_S) : TryMonsterMove(@Player, 0, 1) : EndIf
+  If KeyboardReleased(#PB_Key_A) : TryMonsterMove(@Player, -1, 0) : EndIf
+  If KeyboardReleased(#PB_Key_D) : TryMonsterMove(@Player, 1, 0) : EndIf
 EndProcedure
 If InitSprite() = 0 Or InitKeyboard() = 0
   CompilerIf #PB_Compiler_Processor = #PB_Processor_JavaScript
@@ -185,7 +209,7 @@ Procedure Draw()
       EndIf
     Next j
   Next i
-  DrawSprite(#Player, PlayerX, PlayerY) : DrawHUD()
+  DrawSprite(#SpritePlayer, Player\Tile\x, Player\Tile\y) : DrawHUD()
 EndProcedure
 Procedure RenderFrame()
   ElapsedTimneInS = (ElapsedMilliseconds() - LastTimeInMs) / 1000.0
