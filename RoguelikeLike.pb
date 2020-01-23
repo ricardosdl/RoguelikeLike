@@ -9,7 +9,7 @@ EndStructure
 Enumeration GameResources : #SpriteSheet :  EndEnumeration
 Enumeration GameSprites
   #SpritePlayer : #PlayerDeath : #SpriteFloor : #SpriteWall : #SpriteBird : #SpriteSnake : #SpriteTank
-  #SpriteEater : #SpriteJester
+  #SpriteEater : #SpriteJester : #SpriteHp
 EndEnumeration
 Prototype.a CallBackProc();our callback prototype
 Global PlayerX.w = 0, PlayerY.w = 0
@@ -21,7 +21,7 @@ Global Level.a, Player.TMonster, NewList Monsters.TMonster()
 Procedure LoadSprites()
   LoadSprite(#SpriteSheet, BasePath + "graphics" + #PS$ + "spritesheet.png")
 EndProcedure
-Procedure DrawSprite(SpriteIndex.u, x.l, y.l)
+Procedure DrawSprite(SpriteIndex.u, x.f, y.f)
   ClipSprite(#SpriteSheet, SpriteIndex * 16, 0, 16, 16) : ZoomSprite(#SpriteSheet, TileSize, TileSize) : DisplayTransparentSprite(#SpriteSheet, x * TileSize, y * TileSize)
 EndProcedure
 Procedure MoveMonster(*Monster.TMonster, *NewTile.TTile)
@@ -261,6 +261,13 @@ SoundInitiated = InitSound()
 CompilerIf #PB_Compiler_Processor = #PB_Processor_JavaScript
   BindEvent(#PB_Event_Loading, @Loading()) : BindEvent(#PB_Event_LoadingError, @LoadingError())
 CompilerEndIf
+Procedure DrawMonster(*Monster.TMonster)
+  DrawSprite(*Monster\Sprite, *Monster\Tile\x, *Monster\Tile\y)
+  For i.a = 0 To *Monster\Hp - 1;draw hp
+    ii.l = (i % 3) : Hpx.f = *Monster\Tile\x + (ii) * (5 / 16)
+    DrawSprite(#SpriteHp, Hpx, *Monster\Tile\y - Round( i / 3, #PB_Round_Down) * (5 /16))
+  Next
+EndProcedure
 Procedure Draw()
   ClearScreen(RGB(0,0,0))
   For i.w = 0 To NumTiles - 1
@@ -272,10 +279,8 @@ Procedure Draw()
       EndIf
     Next j
   Next i
-  ForEach Monsters()
-    DrawSprite(Monsters()\Sprite, Monsters()\Tile\x, Monsters()\Tile\y)
-  Next
-  DrawSprite(#SpritePlayer, Player\Tile\x, Player\Tile\y) : DrawHUD()
+  ForEach Monsters() : DrawMonster(@Monsters()) : Next
+  DrawMonster(@Player) : DrawHUD()
 EndProcedure
 Procedure RenderFrame()
   ElapsedTimneInS = (ElapsedMilliseconds() - LastTimeInMs) / 1000.0
