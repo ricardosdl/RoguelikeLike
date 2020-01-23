@@ -101,7 +101,19 @@ Procedure DoMonsterStuff(*Monster.TMonster)
   EndIf
 EndProcedure
 Procedure UpdateMonster(*Monster.TMonster)
-  
+  DoMonsterStuff(*Monster)
+EndProcedure
+Procedure Tick()
+  ForEach Monsters()
+    If Monsters()\hp > 0
+      UpdateMonster(@Monsters())
+    Else
+      DeleteElement(Monsters())
+    EndIf
+  Next
+EndProcedure
+Procedure.a TryPlayerMonsterMove(*Player.TMonster, Dx.w, Dy.w)
+  If TryMonsterMove(Player, Dx, Dy) : Tick() : EndIf
 EndProcedure
 Procedure TryTo(Description.s, Callback.CallbackProc)
   For i.u = 1000 To 1 Step -1
@@ -217,10 +229,10 @@ Procedure DrawHUD()
 EndProcedure
 
 Procedure UpdateKeyBoard(Elapsed.f)
-  If KeyboardReleased(#PB_Key_W) : TryMonsterMove(@Player, 0, -1) : EndIf
-  If KeyboardReleased(#PB_Key_S) : TryMonsterMove(@Player, 0, 1) : EndIf
-  If KeyboardReleased(#PB_Key_A) : TryMonsterMove(@Player, -1, 0) : EndIf
-  If KeyboardReleased(#PB_Key_D) : TryMonsterMove(@Player, 1, 0) : EndIf
+  If KeyboardReleased(#PB_Key_W) : TryPlayerMonsterMove(@Player, 0, -1) : EndIf
+  If KeyboardReleased(#PB_Key_S) : TryPlayerMonsterMove(@Player, 0, 1) : EndIf
+  If KeyboardReleased(#PB_Key_A) : TryPlayerMonsterMove(@Player, -1, 0) : EndIf
+  If KeyboardReleased(#PB_Key_D) : TryPlayerMonsterMove(@Player, 1, 0) : EndIf
 EndProcedure
 If InitSprite() = 0 Or InitKeyboard() = 0
   CompilerIf #PB_Compiler_Processor = #PB_Processor_JavaScript
@@ -262,15 +274,6 @@ Procedure Draw()
     DrawSprite(Monsters()\Sprite, Monsters()\Tile\x, Monsters()\Tile\y)
   Next
   DrawSprite(#SpritePlayer, Player\Tile\x, Player\Tile\y) : DrawHUD()
-EndProcedure
-Procedure Tick()
-  ForEach Monsters()
-    If Monsters()\hp > 0
-      UpdateMonster(@Monsters())
-    Else
-      DeleteElement(Monsters())
-    EndIf
-  Next
 EndProcedure
 Procedure RenderFrame()
   ElapsedTimneInS = (ElapsedMilliseconds() - LastTimeInMs) / 1000.0
