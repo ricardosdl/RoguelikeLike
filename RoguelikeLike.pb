@@ -7,7 +7,10 @@ Structure TMonster
   *Tile.TTile : Sprite.u : Hp.b : MonsterType.a
 EndStructure
 Enumeration GameResources : #SpriteSheet :  EndEnumeration
-Enumeration GameSprites : #SpritePlayer : #PlayerDeath : #SpriteFloor : #SpriteWall  : EndEnumeration
+Enumeration GameSprites
+  #SpritePlayer : #PlayerDeath : #SpriteFloor : #SpriteWall : #SpriteBird : #SpriteSnake : #SpriteTank
+  #SpriteEater : #SpriteJester
+EndEnumeration
 Prototype.a CallBackProc();our callback prototype
 Global PlayerX.w = 0, PlayerY.w = 0
 Global TileSize.a = 64, NumTiles.u = 9, UIWidth.u = 4, GameWidth.u = TileSize * (NumTiles + UIWidth), GameHeight.u = TileSize * NumTiles,ExitGame.a = #False, SoundMuted.a = #False
@@ -32,11 +35,11 @@ Procedure.i InitAMonster(*Tile.TTile, MonsterType.a)
   AddElement(Monsters())
   Select MonsterType
     Case #Player
-    Case #Bird : InitMonster(@Monsters(), *Tile, 4, 3, #Bird)
-    Case #Snake : InitMonster(@Monsters(), *Tile, 5, 1, #Snake)
-    Case #Tank : InitMonster(@Monsters(), *Tile, 6, 2, #Tank)
-    Case #Eater : InitMonster(@Monsters(), *Tile, 7, 1, #Eater)
-    Case #Jester : InitMonster(@Monsters(), *Tile, 8, 2, #Jester)
+    Case #Bird : InitMonster(@Monsters(), *Tile, #SpriteBird, 3, #Bird)
+    Case #Snake : InitMonster(@Monsters(), *Tile, #SpriteSnake, 1, #Snake)
+    Case #Tank : InitMonster(@Monsters(), *Tile, #SpriteTank, 2, #Tank)
+    Case #Eater : InitMonster(@Monsters(), *Tile, #SpriteEater, 1, #Eater)
+    Case #Jester : InitMonster(@Monsters(), *Tile, #SpriteJester, 2, #Jester)
   EndSelect
   ProcedureReturn @Monsters()
 EndProcedure
