@@ -25,18 +25,18 @@ Procedure MoveMonster(*Monster.TMonster, *NewTile.TTile)
   If *Monster\Tile <> #Null : *Monster\Tile\Monster = #Null : EndIf
   *Monster\Tile = *NewTile : *NewTile\Monster = *Monster
 EndProcedure
-Procedure InitMonster(*Monster.TMonster, *Tile.TTile, Sprite.u, Hp.b)
-  MoveMonster(*Monster, *Tile) : *Monster\Sprite = Sprite : *Monster\Hp = Hp
+Procedure InitMonster(*Monster.TMonster, *Tile.TTile, Sprite.u, Hp.b, MonsterType.a)
+  MoveMonster(*Monster, *Tile) : *Monster\Sprite = Sprite : *Monster\Hp = Hp : *Monster\MonsterType = MonsterType
 EndProcedure
 Procedure.i InitAMonster(*Tile.TTile, MonsterType.a)
   AddElement(Monsters())
   Select MonsterType
     Case #Player
-    Case #Bird : InitMonster(@Monsters(), *Tile, 4, 3)
-    Case #Snake : InitMonster(@Monsters(), *Tile, 5, 1)
-    Case #Tank : InitMonster(@Monsters(), *Tile, 6, 2)
-    Case #Eater : InitMonster(@Monsters(), *Tile, 7, 1)
-    Case #Jester : InitMonster(@Monsters(), *Tile, 8, 2)
+    Case #Bird : InitMonster(@Monsters(), *Tile, 4, 3, #Bird)
+    Case #Snake : InitMonster(@Monsters(), *Tile, 5, 1, #Snake)
+    Case #Tank : InitMonster(@Monsters(), *Tile, 6, 2, #Tank)
+    Case #Eater : InitMonster(@Monsters(), *Tile, 7, 1, #Eater)
+    Case #Jester : InitMonster(@Monsters(), *Tile, 8, 2, #Jester)
   EndSelect
   ProcedureReturn @Monsters()
 EndProcedure
@@ -93,8 +93,9 @@ Procedure DoMonsterStuff(*Monster.TMonster)
   If ListSize(AdjacentPassableNeighbors()) > 0
     SmallestDistance.w = NumTiles * NumTiles : *ClosestPassableTile.TTile = #Null
     ForEach AdjacentPassableNeighbors() : *CurrentTile.TTile = AdjacentPassableNeighbors()
-      If GetTileDistance(*CurrentTile, Player\Tile) < SmallestDistance
-        *ClosestPassableTile = *CurrentTile
+      Distance.a = GetTileDistance(*CurrentTile, Player\Tile)
+      If Distance < SmallestDistance
+        *ClosestPassableTile = *CurrentTile : SmallestDistance = Distance
       EndIf
     Next
     TryMonsterMove(*Monster, *ClosestPassableTile\x - *Monster\Tile\x, *ClosestPassableTile\y - *Monster\Tile\y)
@@ -137,12 +138,10 @@ Procedure.i SpawnMonster()
 EndProcedure
 Procedure GenerateMonsters()
   NumMonsters.u = Level + 1
-  For i.u = 1 To NumMonsters
-    SpawnMonster()
-  Next i
+  For i.u = 1 To NumMonsters : SpawnMonster() : Next i
 EndProcedure
 Procedure InitPlayer(*Player.TMonster, *Tile.TTile, Sprite.u, Hp.b)
-  InitMonster(*Player, *Tile, Sprite, Hp) : *Player\MonsterType = #Player
+  InitMonster(*Player, *Tile, Sprite, Hp, #Player)
 EndProcedure
 Procedure DrawTile(*Tile.TTile)
   DrawSprite(*Tile\Sprite, *Tile\x, *Tile\y)
