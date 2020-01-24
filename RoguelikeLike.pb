@@ -3,8 +3,9 @@ Structure TTile
   x.w : y.w : Sprite.u : Passable.a : TileType.a : *Monster.TMonster
 EndStructure
 Enumeration MonsterTypes : #Player : #Bird : #Snake : #Tank : #Eater : #Jester : EndEnumeration
+Prototype DoStuffProc(*Monster)
 Structure TMonster
-  *Tile.TTile : Sprite.u : Hp.b : MonsterType.a : Dead.a
+  *Tile.TTile : Sprite.u : Hp.b : MonsterType.a : Dead.a : DoStuff.DoStuffProc
 EndStructure
 Enumeration GameResources : #SpriteSheet :  EndEnumeration
 Enumeration GameSprites
@@ -28,20 +29,8 @@ Procedure MoveMonster(*Monster.TMonster, *NewTile.TTile)
   If *Monster\Tile <> #Null : *Monster\Tile\Monster = #Null : EndIf
   *Monster\Tile = *NewTile : *NewTile\Monster = *Monster
 EndProcedure
-Procedure InitMonster(*Monster.TMonster, *Tile.TTile, Sprite.u, Hp.b, MonsterType.a)
+Procedure InitMonster(*Monster.TMonster, *Tile.TTile, Sprite.u, Hp.b, MonsterType.a, DoStuff.DoStuffProc)
   MoveMonster(*Monster, *Tile) : *Monster\Sprite = Sprite : *Monster\Hp = Hp : *Monster\MonsterType = MonsterType
-EndProcedure
-Procedure.i InitAMonster(*Tile.TTile, MonsterType.a)
-  AddElement(Monsters())
-  Select MonsterType
-    Case #Player
-    Case #Bird : InitMonster(@Monsters(), *Tile, #SpriteBird, 3, #Bird)
-    Case #Snake : InitMonster(@Monsters(), *Tile, #SpriteSnake, 1, #Snake)
-    Case #Tank : InitMonster(@Monsters(), *Tile, #SpriteTank, 2, #Tank)
-    Case #Eater : InitMonster(@Monsters(), *Tile, #SpriteEater, 1, #Eater)
-    Case #Jester : InitMonster(@Monsters(), *Tile, #SpriteJester, 2, #Jester)
-  EndSelect
-  ProcedureReturn @Monsters()
 EndProcedure
 Procedure.i GetTile(x.w, y.w)
   If (x < 0 Or x > NumTiles - 1) Or (y < 0 Or y > NumTiles -1)
@@ -54,23 +43,6 @@ Procedure.a GetTileDistance(*TileA.TTile, *TileB.TTile)
 EndProcedure
 Procedure.i GetTileNeighbor(*Tile.TTile, Dx.w, Dy.w)
   ProcedureReturn GetTile(*Tile\x + Dx, *Tile\y + Dy)
-EndProcedure
-Procedure GetTileAdjacentNeighbors(*Tile.TTile, List AdjacentNeighbors.i())
-  ClearList(AdjacentNeighbors())
-  AddElement(AdjacentNeighbors()) : AdjacentNeighbors() = GetTileNeighbor(*Tile, 0, -1)
-  AddElement(AdjacentNeighbors()) : AdjacentNeighbors() = GetTileNeighbor(*Tile, 0, 1)
-  AddElement(AdjacentNeighbors()) : AdjacentNeighbors() = GetTileNeighbor(*Tile, -1, 0)
-  AddElement(AdjacentNeighbors()) : AdjacentNeighbors() = GetTileNeighbor(*Tile, 1, 0)
-EndProcedure
-Procedure GetTileAdjacentPassableNeighbors(*Tile.TTile, List AdjacentPassableNeighbors.i())
-  Define NewList AdjacentNeighbors.i() : ClearList(AdjacentPassableNeighbors())
-  GetTileAdjacentNeighbors(*Tile, AdjacentNeighbors())
-  ForEach AdjacentNeighbors() : *AdjacentNeighbor.TTile = AdjacentNeighbors()
-    If *AdjacentNeighbor = #Null : Continue : EndIf
-    If *AdjacentNeighbor\Passable
-      AddElement(AdjacentPassableNeighbors()) : AdjacentPassableNeighbors() = *AdjacentNeighbor
-    EndIf
-  Next
 EndProcedure
 Procedure DieMonster(*Monster.TMonster)
   *Monster\Dead = #True : *Monster\Tile\Monster = #Null : *Monster\Sprite = #SpritePlayerDeath
@@ -93,6 +65,23 @@ Procedure.a TryMonsterMove(*Monster.TMonster, Dx.w, Dy.w)
   EndIf
   ProcedureReturn #False
 EndProcedure
+Procedure GetTileAdjacentNeighbors(*Tile.TTile, List AdjacentNeighbors.i())
+  ClearList(AdjacentNeighbors())
+  AddElement(AdjacentNeighbors()) : AdjacentNeighbors() = GetTileNeighbor(*Tile, 0, -1)
+  AddElement(AdjacentNeighbors()) : AdjacentNeighbors() = GetTileNeighbor(*Tile, 0, 1)
+  AddElement(AdjacentNeighbors()) : AdjacentNeighbors() = GetTileNeighbor(*Tile, -1, 0)
+  AddElement(AdjacentNeighbors()) : AdjacentNeighbors() = GetTileNeighbor(*Tile, 1, 0)
+EndProcedure
+Procedure GetTileAdjacentPassableNeighbors(*Tile.TTile, List AdjacentPassableNeighbors.i())
+  Define NewList AdjacentNeighbors.i() : ClearList(AdjacentPassableNeighbors())
+  GetTileAdjacentNeighbors(*Tile, AdjacentNeighbors())
+  ForEach AdjacentNeighbors() : *AdjacentNeighbor.TTile = AdjacentNeighbors()
+    If *AdjacentNeighbor = #Null : Continue : EndIf
+    If *AdjacentNeighbor\Passable
+      AddElement(AdjacentPassableNeighbors()) : AdjacentPassableNeighbors() = *AdjacentNeighbor
+    EndIf
+  Next
+EndProcedure
 Procedure DoMonsterStuff(*Monster.TMonster)
   NewList AdjacentPassableNeighbors.i()
   GetTileAdjacentPassableNeighbors(*Monster\Tile, AdjacentPassableNeighbors())
@@ -114,6 +103,18 @@ Procedure DoMonsterStuff(*Monster.TMonster)
     Next
     TryMonsterMove(*Monster, *ClosestPassableTile\x - *Monster\Tile\x, *ClosestPassableTile\y - *Monster\Tile\y)
   EndIf
+EndProcedure
+Procedure.i InitAMonster(*Tile.TTile, MonsterType.a)
+  AddElement(Monsters())
+  Select MonsterType
+    Case #Player
+    Case #Bird : InitMonster(@Monsters(), *Tile, #SpriteBird, 3, #Bird, @DoMonsterStuff())
+    Case #Snake : InitMonster(@Monsters(), *Tile, #SpriteSnake, 1, #Snake, @DoMonsterStuff())
+    Case #Tank : InitMonster(@Monsters(), *Tile, #SpriteTank, 2, #Tank, @DoMonsterStuff())
+    Case #Eater : InitMonster(@Monsters(), *Tile, #SpriteEater, 1, #Eater, @DoMonsterStuff())
+    Case #Jester : InitMonster(@Monsters(), *Tile, #SpriteJester, 2, #Jester, @DoMonsterStuff())
+  EndSelect
+  ProcedureReturn @Monsters()
 EndProcedure
 Procedure UpdateMonster(*Monster.TMonster)
   DoMonsterStuff(*Monster)
@@ -155,7 +156,7 @@ Procedure GenerateMonsters()
   For i.u = 1 To NumMonsters : SpawnMonster() : Next i
 EndProcedure
 Procedure InitPlayer(*Player.TMonster, *Tile.TTile, Sprite.u, Hp.b)
-  InitMonster(*Player, *Tile, Sprite, Hp, #Player)
+  InitMonster(*Player, *Tile, Sprite, Hp, #Player, #Null)
 EndProcedure
 Procedure DrawTile(*Tile.TTile)
   DrawSprite(*Tile\Sprite, *Tile\x, *Tile\y)
