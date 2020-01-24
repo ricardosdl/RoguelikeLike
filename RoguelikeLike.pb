@@ -4,11 +4,11 @@ Structure TTile
 EndStructure
 Enumeration MonsterTypes : #Player : #Bird : #Snake : #Tank : #Eater : #Jester : EndEnumeration
 Structure TMonster
-  *Tile.TTile : Sprite.u : Hp.b : MonsterType.a
+  *Tile.TTile : Sprite.u : Hp.b : MonsterType.a : Dead.a
 EndStructure
 Enumeration GameResources : #SpriteSheet :  EndEnumeration
 Enumeration GameSprites
-  #SpritePlayer : #PlayerDeath : #SpriteFloor : #SpriteWall : #SpriteBird : #SpriteSnake : #SpriteTank
+  #SpritePlayer : #SpritePlayerDeath : #SpriteFloor : #SpriteWall : #SpriteBird : #SpriteSnake : #SpriteTank
   #SpriteEater : #SpriteJester : #SpriteHp
 EndEnumeration
 Prototype.a CallBackProc();our callback prototype
@@ -72,11 +72,22 @@ Procedure GetTileAdjacentPassableNeighbors(*Tile.TTile, List AdjacentPassableNei
     EndIf
   Next
 EndProcedure
+Procedure DieMonster(*Monster.TMonster)
+  *Monster\Dead = #True : *Monster\Tile\Monster = #Null : *Monster\Sprite = #SpritePlayerDeath
+EndProcedure
+Procedure HitMonster(*Monster.TMonster, Damage.a)
+  *Monster\hp - Damage
+  If *Monster\hp <= 0 : DieMonster(*Monster) : EndIf
+EndProcedure
 Procedure.a TryMonsterMove(*Monster.TMonster, Dx.w, Dy.w)
   *NewTile.TTile = GetTileNeighbor(*Monster\Tile, Dx, Dy)
   If *NewTile <> #Null And *NewTile\Passable
     If *NewTile\Monster = #Null
       MoveMonster(*Monster, *NewTile)
+    Else
+      If *Monster\MonsterType = #Player Or *NewTile\Monster\MonsterType = #Player
+        HitMonster(*NewTile\Monster, 1)
+      EndIf
     EndIf
     ProcedureReturn #True
   EndIf
@@ -263,8 +274,8 @@ CompilerIf #PB_Compiler_Processor = #PB_Processor_JavaScript
 CompilerEndIf
 Procedure DrawMonster(*Monster.TMonster)
   DrawSprite(*Monster\Sprite, *Monster\Tile\x, *Monster\Tile\y)
-  For i.a = 0 To *Monster\Hp - 1;draw hp
-    ii.l = (i % 3) : Hpx.f = *Monster\Tile\x + (ii) * (5 / 16)
+  For i.b = 0 To *Monster\Hp - 1;draw hp
+    ii.b = (i % 3) : Hpx.f = *Monster\Tile\x + (ii) * (5 / 16)
     DrawSprite(#SpriteHp, Hpx, *Monster\Tile\y - Round( i / 3, #PB_Round_Down) * (5 /16))
   Next
 EndProcedure
