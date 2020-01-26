@@ -5,7 +5,7 @@ EndStructure
 Enumeration MonsterTypes : #Player : #Bird : #Snake : #Tank : #Eater : #Jester : EndEnumeration
 Prototype DoStuffProc(*Monster) : Prototype UpdateMonsterProc(*Monster)
 Structure TMonster
-  *Tile.TTile : Sprite.u : Hp.b : MonsterType.a : Dead.a : DoStuff.DoStuffProc : AttackedThisTurn.a
+  *Tile.TTile : Sprite.u : Hp.f : MonsterType.a : Dead.a : DoStuff.DoStuffProc : AttackedThisTurn.a
   Stunned.a : Update.UpdateMonsterProc
 EndStructure
 Enumeration GameResources : #SpriteSheet :  EndEnumeration
@@ -18,7 +18,7 @@ Global PlayerX.w = 0, PlayerY.w = 0
 Global TileSize.a = 64, NumTiles.u = 9, UIWidth.u = 4, GameWidth.u = TileSize * (NumTiles + UIWidth), GameHeight.u = TileSize * NumTiles,ExitGame.a = #False, SoundMuted.a = #False
 Global BasePath.s = "data" + #PS$, ElapsedTimneInS.f, LastTimeInMs.q
 Global Dim Tiles.TTile(NumTiles - 1, NumTiles - 1), *RandomPassableTile.TTile
-Global Level.a, Player.TMonster, NewList Monsters.TMonster()
+Global Level.a, Player.TMonster, NewList Monsters.TMonster(), MaxHp.a = 6
 
 Procedure LoadSprites()
   LoadSprite(#SpriteSheet, BasePath + "graphics" + #PS$ + "spritesheet.png")
@@ -111,6 +111,35 @@ Procedure DoSnakeStuff(*Snake.TMonster)
   *Snake\AttackedThisTurn = #False : DoMonsterStuff(*Snake)
   If Not *Snake\AttackedThisTurn : DoMonsterStuff(*Snake) : EndIf
 EndProcedure
+Procedure ReplaceTile(NewTileType.a, x.w, y.w)
+  If NewTileType = #Floor
+    Tiles(x, y)\Sprite = #SpriteFloor : Tiles(x, y)\Passable = #True : Tiles(x, y)\TileType = #Floor
+  ElseIf NewTileType = #Wall
+    Tiles(x, y)\Sprite = #SpriteWall : Tiles(x, y)\Passable = #False : Tiles(x, y)\TileType = #Wall
+  EndIf
+EndProcedure
+Procedure HealMonsterEater(*Eater.TMonster, Damage.f)
+  *Eater\Hp + Damage : If *Eater\Hp > MaxHp : *Eater\Hp = MaxHp : EndIf
+EndProcedure
+Procedure.a InBounds(x.w, y.w)
+  ProcedureReturn Bool(x > 0 And y > 0 And x < NumTiles - 1 And y < NumTiles - 1)
+EndProcedure
+Procedure DoEaterSuff(*Eater.TMonster)
+  NewList AdjacentNeighbors.i()
+  GetTileAdjacentNeighbors(*Eater\Tile, AdjacentNeighbors())
+  ForEach AdjacentNeighbors() : *CurrentTile.TTile = AdjacentNeighbors()
+    If Not *CurrentTile\Passable And InBounds(*CurrentTile\x, *CurrentTile\y)
+      Continue
+    Else
+      DeleteElement(AdjacentNeighbors())
+    EndIf
+  Next
+  If ListSize(AdjacentNeighbors()) > 0 : FirstElement(AdjacentNeighbors()) : *Tile.TTile = AdjacentNeighbors()
+    ReplaceTile(#Floor, *Tile\x, *Tile\y) : HealMonsterEater(*Eater.TMonster, 0.5)
+  Else
+    DoMonsterStuff(*Eater)
+  EndIf
+EndProcedure
 Procedure UpdateMonster(*Monster.TMonster)
   If *Monster\Stunned
     *Monster\Stunned = #False : ProcedureReturn
@@ -128,7 +157,7 @@ Procedure.i InitAMonster(*Tile.TTile, MonsterType.a)
     Case #Bird : InitMonster(@Monsters(), *Tile, #SpriteBird, 3, #Bird, @DoMonsterStuff(), @UpdateMonster())
     Case #Snake : InitMonster(@Monsters(), *Tile, #SpriteSnake, 1, #Snake, @DoSnakeStuff(), @UpdateMonster())
     Case #Tank : InitMonster(@Monsters(), *Tile, #SpriteTank, 2, #Tank, @DoMonsterStuff(), @UpdateTankMonster())
-    Case #Eater : InitMonster(@Monsters(), *Tile, #SpriteEater, 1, #Eater, @DoMonsterStuff(), @UpdateMonster())
+    Case #Eater : InitMonster(@Monsters(), *Tile, #SpriteEater, 1, #Eater, @DoEaterSuff(), @UpdateMonster())
     Case #Jester : InitMonster(@Monsters(), *Tile, #SpriteJester, 2, #Jester, @DoMonsterStuff(), @UpdateMonster())
   EndSelect
   ProcedureReturn @Monsters()
@@ -163,7 +192,7 @@ Procedure.i RandomPassableTile()
   ProcedureReturn *RandomPassableTile
 EndProcedure
 Procedure.i SpawnMonster()
-  ProcedureReturn InitAMonster(RandomPassableTile(), Random(#Tank, #Tank))
+  ProcedureReturn InitAMonster(RandomPassableTile(), Random(#Jester, #Bird))
 EndProcedure
 Procedure GenerateMonsters()
   NumMonsters.u = Level + 1
@@ -195,9 +224,6 @@ Procedure GetTileConnectedTiles(*Tile.TTile, List ConnectedTiles.i())
     MergeLists(PassableNeighbors(), ConnectedTiles()) : MergeLists(CopyPassableNeighBors(), TilesToCheck())
     ResetList(TilesToCheck())
   Wend
-EndProcedure
-Procedure.a InBounds(x.w, y.w)
-  ProcedureReturn Bool(x > 0 And y > 0 And x < NumTiles - 1 And y < NumTiles - 1)
 EndProcedure
 Procedure.u GenerateTiles()
   NumPassableTiles.u = 0
