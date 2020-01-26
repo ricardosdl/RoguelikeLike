@@ -150,6 +150,12 @@ Procedure UpdateTankMonster(*Monster.TMonster)
   StartStunned.a = *Monster\Stunned : UpdateMonster(*Monster)
   If Not StartStunned : *Monster\Stunned = #True : EndIf
 EndProcedure
+Procedure DoJesterStuff(*Jester.TMonster)
+  NewList Neighbors.i() : GetTileAdjacentPassableNeighbors(*Jester\Tile, Neighbors())
+  If ListSize(Neighbors()) > 0 : RandomizeList(Neighbors()) : FirstElement(Neighbors()) : *NewTile.TTile = Neighbors()
+    TryMonsterMove(*Jester, *NewTile\x - *Jester\Tile\x, *NewTile\y - *Jester\Tile\y)
+  EndIf
+EndProcedure
 Procedure.i InitAMonster(*Tile.TTile, MonsterType.a)
   AddElement(Monsters())
   Select MonsterType
@@ -158,7 +164,7 @@ Procedure.i InitAMonster(*Tile.TTile, MonsterType.a)
     Case #Snake : InitMonster(@Monsters(), *Tile, #SpriteSnake, 1, #Snake, @DoSnakeStuff(), @UpdateMonster())
     Case #Tank : InitMonster(@Monsters(), *Tile, #SpriteTank, 2, #Tank, @DoMonsterStuff(), @UpdateTankMonster())
     Case #Eater : InitMonster(@Monsters(), *Tile, #SpriteEater, 1, #Eater, @DoEaterSuff(), @UpdateMonster())
-    Case #Jester : InitMonster(@Monsters(), *Tile, #SpriteJester, 2, #Jester, @DoMonsterStuff(), @UpdateMonster())
+    Case #Jester : InitMonster(@Monsters(), *Tile, #SpriteJester, 2, #Jester, @DoJesterStuff(), @UpdateMonster())
   EndSelect
   ProcedureReturn @Monsters()
 EndProcedure
