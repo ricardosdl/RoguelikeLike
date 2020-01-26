@@ -3,9 +3,10 @@ Structure TTile
   x.w : y.w : Sprite.u : Passable.a : TileType.a : *Monster.TMonster
 EndStructure
 Enumeration MonsterTypes : #Player : #Bird : #Snake : #Tank : #Eater : #Jester : EndEnumeration
-Prototype DoStuffProc(*Monster)
+Prototype DoStuffProc(*Monster) : Prototype UpdateMonsterProc(*Monster)
 Structure TMonster
   *Tile.TTile : Sprite.u : Hp.b : MonsterType.a : Dead.a : DoStuff.DoStuffProc : AttackedThisTurn.a
+  Stunned.a : Update.UpdateMonsterProc
 EndStructure
 Enumeration GameResources : #SpriteSheet :  EndEnumeration
 Enumeration GameSprites
@@ -29,9 +30,10 @@ Procedure MoveMonster(*Monster.TMonster, *NewTile.TTile)
   If *Monster\Tile <> #Null : *Monster\Tile\Monster = #Null : EndIf
   *Monster\Tile = *NewTile : *NewTile\Monster = *Monster
 EndProcedure
-Procedure InitMonster(*Monster.TMonster, *Tile.TTile, Sprite.u, Hp.b, MonsterType.a, DoStuff.DoStuffProc)
+Procedure InitMonster(*Monster.TMonster, *Tile.TTile, Sprite.u, Hp.b, MonsterType.a, DoStuff.DoStuffProc, UpdateMonster.UpdateMonsterProc)
   MoveMonster(*Monster, *Tile) : *Monster\Sprite = Sprite : *Monster\Hp = Hp : *Monster\MonsterType = MonsterType
-  *Monster\Dead = #False : *Monster\DoStuff = DoStuff : *Monster\AttackedThisTurn = #False
+  *Monster\Dead = #False : *Monster\DoStuff = DoStuff : *Monster\AttackedThisTurn = #False : *Monster\Stunned = #False
+  *Monster\Update = UpdateMonster
 EndProcedure
 Procedure.i GetTile(x.w, y.w)
   If (x < 0 Or x > NumTiles - 1) Or (y < 0 Or y > NumTiles -1)
@@ -59,7 +61,7 @@ Procedure.a TryMonsterMove(*Monster.TMonster, Dx.w, Dy.w)
       MoveMonster(*Monster, *NewTile)
     Else
       If *Monster\MonsterType = #Player Or *NewTile\Monster\MonsterType = #Player
-        HitMonster(*NewTile\Monster, 1) : *Monster\AttackedThisTurn = #True
+         *Monster\AttackedThisTurn = #True : *NewTile\Monster\Stunned = #True : HitMonster(*NewTile\Monster, 1)
       EndIf
     EndIf
     ProcedureReturn #True
@@ -109,25 +111,32 @@ Procedure DoSnakeStuff(*Snake.TMonster)
   *Snake\AttackedThisTurn = #False : DoMonsterStuff(*Snake)
   If Not *Snake\AttackedThisTurn : DoMonsterStuff(*Snake) : EndIf
 EndProcedure
+Procedure UpdateMonster(*Monster.TMonster)
+  If *Monster\Stunned
+    *Monster\Stunned = #False : ProcedureReturn
+  EndIf
+  If *Monster\DoStuff <> #Null : *Monster\DoStuff(*Monster) : EndIf
+EndProcedure
+Procedure UpdateTankMonster(*Monster.TMonster)
+  StartStunned.a = *Monster\Stunned : UpdateMonster(*Monster)
+  If Not StartStunned : *Monster\Stunned = #True : EndIf
+EndProcedure
 Procedure.i InitAMonster(*Tile.TTile, MonsterType.a)
   AddElement(Monsters())
   Select MonsterType
     Case #Player
-    Case #Bird : InitMonster(@Monsters(), *Tile, #SpriteBird, 3, #Bird, @DoMonsterStuff())
-    Case #Snake : InitMonster(@Monsters(), *Tile, #SpriteSnake, 1, #Snake, @DoSnakeStuff())
-    Case #Tank : InitMonster(@Monsters(), *Tile, #SpriteTank, 2, #Tank, @DoMonsterStuff())
-    Case #Eater : InitMonster(@Monsters(), *Tile, #SpriteEater, 1, #Eater, @DoMonsterStuff())
-    Case #Jester : InitMonster(@Monsters(), *Tile, #SpriteJester, 2, #Jester, @DoMonsterStuff())
+    Case #Bird : InitMonster(@Monsters(), *Tile, #SpriteBird, 3, #Bird, @DoMonsterStuff(), @UpdateMonster())
+    Case #Snake : InitMonster(@Monsters(), *Tile, #SpriteSnake, 1, #Snake, @DoSnakeStuff(), @UpdateMonster())
+    Case #Tank : InitMonster(@Monsters(), *Tile, #SpriteTank, 2, #Tank, @DoMonsterStuff(), @UpdateTankMonster())
+    Case #Eater : InitMonster(@Monsters(), *Tile, #SpriteEater, 1, #Eater, @DoMonsterStuff(), @UpdateMonster())
+    Case #Jester : InitMonster(@Monsters(), *Tile, #SpriteJester, 2, #Jester, @DoMonsterStuff(), @UpdateMonster())
   EndSelect
   ProcedureReturn @Monsters()
-EndProcedure
-Procedure UpdateMonster(*Monster.TMonster)
-  If *Monster\DoStuff <> #Null : *Monster\DoStuff(*Monster) : EndIf
 EndProcedure
 Procedure Tick()
   ForEach Monsters()
     If Monsters()\hp > 0
-      UpdateMonster(@Monsters())
+      Monsters()\Update(@Monsters())
     Else
       DeleteElement(Monsters())
     EndIf
@@ -154,14 +163,14 @@ Procedure.i RandomPassableTile()
   ProcedureReturn *RandomPassableTile
 EndProcedure
 Procedure.i SpawnMonster()
-  ProcedureReturn InitAMonster(RandomPassableTile(), Random(#Jester, #Bird))
+  ProcedureReturn InitAMonster(RandomPassableTile(), Random(#Tank, #Tank))
 EndProcedure
 Procedure GenerateMonsters()
   NumMonsters.u = Level + 1
   For i.u = 1 To NumMonsters : SpawnMonster() : Next i
 EndProcedure
 Procedure InitPlayer(*Player.TMonster, *Tile.TTile, Sprite.u, Hp.b)
-  InitMonster(*Player, *Tile, Sprite, Hp, #Player, #Null)
+  InitMonster(*Player, *Tile, Sprite, Hp, #Player, #Null, #Null)
 EndProcedure
 Procedure DrawTile(*Tile.TTile)
   DrawSprite(*Tile\Sprite, *Tile\x, *Tile\y)
@@ -201,6 +210,7 @@ Procedure.u GenerateTiles()
         Tiles(i, j)\x = i : Tiles(i, j)\y = j : Tiles(i, j)\Sprite = #SpriteFloor : Tiles(i, j)\Passable = #True
         Tiles(i, j)\TileType = #Floor : NumPassableTiles + 1
       EndIf
+      Tiles(i, j)\Monster = #Null
     Next j
   Next i
   ProcedureReturn NumPassableTiles
