@@ -1,6 +1,7 @@
-﻿Enumeration TileTypes : #Floor : #Wall : EndEnumeration
+﻿Enumeration TileTypes : #Floor : #Wall : #Exit : EndEnumeration
+Prototype StepOnTileProc(*Tile, *Monster)
 Structure TTile
-  x.w : y.w : Sprite.u : Passable.a : TileType.a : *Monster.TMonster
+  x.w : y.w : Sprite.u : Passable.a : TileType.a : *Monster.TMonster : StepOn.StepOnTileProc
 EndStructure
 Enumeration MonsterTypes : #Player : #Bird : #Snake : #Tank : #Eater : #Jester : EndEnumeration
 Prototype DoStuffProc(*Monster) : Prototype UpdateMonsterProc(*Monster)
@@ -11,7 +12,7 @@ EndStructure
 Enumeration GameResources : #SpriteSheet : #TitleBackground :  EndEnumeration
 Enumeration GameSprites
   #SpritePlayer : #SpritePlayerDeath : #SpriteFloor : #SpriteWall : #SpriteBird : #SpriteSnake : #SpriteTank
-  #SpriteEater : #SpriteJester : #SpriteHp : #SpriteTeleport
+  #SpriteEater : #SpriteJester : #SpriteHp : #SpriteTeleport : #SpriteExit
 EndEnumeration
 Prototype.a CallBackProc();our callback prototype
 Global PlayerX.w = 0, PlayerY.w = 0
@@ -28,15 +29,28 @@ EndProcedure
 Procedure DrawSprite(SpriteIndex.u, x.f, y.f)
   ClipSprite(#SpriteSheet, SpriteIndex * 16, 0, 16, 16) : ZoomSprite(#SpriteSheet, TileSize, TileSize) : DisplayTransparentSprite(#SpriteSheet, x * TileSize, y * TileSize)
 EndProcedure
-Procedure MoveMonster(*Monster.TMonster, *NewTile.TTile)
-  If *Monster\Tile <> #Null : *Monster\Tile\Monster = #Null : EndIf
-  *Monster\Tile = *NewTile : *NewTile\Monster = *Monster
+Procedure ShowTitle()
+  DisplayTransparentSprite(#TitleBackground, 0, 0)
+  GameState = "title"
 EndProcedure
-Procedure InitMonster(*Monster.TMonster, *Tile.TTile, Sprite.u, Hp.b, MonsterType.a,
-    DoStuff.DoStuffProc, UpdateMonster.UpdateMonsterProc, TeleportCounter.b)
-  MoveMonster(*Monster, *Tile) : *Monster\Sprite = Sprite : *Monster\Hp = Hp : *Monster\MonsterType = MonsterType
-  *Monster\Dead = #False : *Monster\DoStuff = DoStuff : *Monster\AttackedThisTurn = #False : *Monster\Stunned = #False
-  *Monster\Update = UpdateMonster : *Monster\TeleportCounter = TeleportCounter
+Procedure.a InBounds(x.w, y.w)
+  ProcedureReturn Bool(x > 0 And y > 0 And x < NumTiles - 1 And y < NumTiles - 1)
+EndProcedure
+Procedure.u GenerateTiles()
+  NumPassableTiles.u = 0
+  For i.w = 0 To NumTiles - 1
+    For j.w = 0 To NumTiles - 1
+      If (Random(100, 0) / 100.0 < 0.3) Or (Not InBounds(i, j))
+        Tiles(i, j)\x = i : Tiles(i, j)\y = j : Tiles(i, j)\Sprite = #SpriteWall : Tiles(i, j)\Passable = #False
+        Tiles(i, j)\TileType = #Wall : Tiles(i, j)\StepOn = #Null
+      Else
+        Tiles(i, j)\x = i : Tiles(i, j)\y = j : Tiles(i, j)\Sprite = #SpriteFloor : Tiles(i, j)\Passable = #True
+        Tiles(i, j)\TileType = #Floor : Tiles(i, j)\StepOn = #Null : NumPassableTiles + 1
+      EndIf
+      Tiles(i, j)\Monster = #Null
+    Next j
+  Next i
+  ProcedureReturn NumPassableTiles
 EndProcedure
 Procedure.i GetTile(x.w, y.w)
   If (x < 0 Or x > NumTiles - 1) Or (y < 0 Or y > NumTiles -1)
@@ -44,32 +58,25 @@ Procedure.i GetTile(x.w, y.w)
   EndIf
   ProcedureReturn @Tiles(x, y)
 EndProcedure
-Procedure.a GetTileDistance(*TileA.TTile, *TileB.TTile)
-  ProcedureReturn Abs(*TileA\x - *TileB\x) + Abs(*TileA\y - *TileB\y)
+Procedure GetRandomPassableTile()
+  x.w = Random(NumTiles - 1, 0) : y = Random(NumTiles - 1, 0)
+  *RandomPassableTile = GetTile(x, y)
+  ProcedureReturn Bool(*RandomPassableTile\Passable And Not *RandomPassableTile\Monster)
+EndProcedure
+Procedure TryTo(Description.s, Callback.CallbackProc)
+  For i.u = 1000 To 1 Step -1
+    If Callback()
+      ProcedureReturn
+    EndIf
+  Next i
+  RaiseError(#PB_OnError_IllegalInstruction)
+EndProcedure
+Procedure.i RandomPassableTile()
+  TryTo("get random passable tile", @GetRandomPassableTile())
+  ProcedureReturn *RandomPassableTile
 EndProcedure
 Procedure.i GetTileNeighbor(*Tile.TTile, Dx.w, Dy.w)
   ProcedureReturn GetTile(*Tile\x + Dx, *Tile\y + Dy)
-EndProcedure
-Procedure DieMonster(*Monster.TMonster)
-  *Monster\Dead = #True : *Monster\Tile\Monster = #Null : *Monster\Sprite = #SpritePlayerDeath
-EndProcedure
-Procedure HitMonster(*Monster.TMonster, Damage.a)
-  *Monster\hp - Damage
-  If *Monster\hp <= 0 : DieMonster(*Monster) : EndIf
-EndProcedure
-Procedure.a TryMonsterMove(*Monster.TMonster, Dx.w, Dy.w)
-  *NewTile.TTile = GetTileNeighbor(*Monster\Tile, Dx, Dy)
-  If *NewTile <> #Null And *NewTile\Passable
-    If *NewTile\Monster = #Null
-      MoveMonster(*Monster, *NewTile)
-    Else
-      If *Monster\MonsterType = #Player Or *NewTile\Monster\MonsterType = #Player
-         *Monster\AttackedThisTurn = #True : *NewTile\Monster\Stunned = #True : HitMonster(*NewTile\Monster, 1)
-      EndIf
-    EndIf
-    ProcedureReturn #True
-  EndIf
-  ProcedureReturn #False
 EndProcedure
 Procedure GetTileAdjacentNeighbors(*Tile.TTile, List AdjacentNeighbors.i())
   ClearList(AdjacentNeighbors())
@@ -88,6 +95,86 @@ Procedure GetTileAdjacentPassableNeighbors(*Tile.TTile, List AdjacentPassableNei
     EndIf
   Next
 EndProcedure
+Procedure GetTileConnectedTiles(*Tile.TTile, List ConnectedTiles.i())
+  ClearList(ConnectedTiles()) : AddElement(ConnectedTiles()) : ConnectedTiles() = *Tile
+  NewList TilesToCheck.i() : 
+  AddElement(TilesToCheck()) : 
+  TilesToCheck() = *Tile : 
+  ResetList(TilesToCheck())
+  While(NextElement(TilesToCheck()))
+    *CurrentTile.TTile = TilesToCheck() : FirstElement(TilesToCheck()) : DeleteElement(TilesToCheck())
+    NewList PassableNeighbors.i() : GetTileAdjacentPassableNeighbors(*CurrentTile, PassableNeighbors())
+    ForEach ConnectedTiles()
+      ForEach PassableNeighbors()
+        If PassableNeighbors() = ConnectedTiles()
+          DeleteElement(PassableNeighbors())
+        EndIf
+      Next
+    Next
+    NewList CopyPassableNeighBors() : CopyList(PassableNeighbors(), CopyPassableNeighBors())
+    MergeLists(PassableNeighbors(), ConnectedTiles()) : MergeLists(CopyPassableNeighBors(), TilesToCheck())
+    ResetList(TilesToCheck())
+  Wend
+EndProcedure
+Procedure GenerateMap()
+  PassableTiles.u = GenerateTiles()
+  *RandomPassableTile = RandomPassableTile() : NewList ConnectedTiles.i()
+  GetTileConnectedTiles(*RandomPassableTile, ConnectedTiles())
+  ProcedureReturn Bool(PassableTiles = ListSize(ConnectedTiles()))
+EndProcedure
+Declare GenerateMonsters()
+Procedure GenerateLevel()
+  TryTo("generate map", @GenerateMap())
+  GenerateMonsters()
+EndProcedure
+Declare InitMonster(*Monster.TMonster, *Tile.TTile, Sprite.u, Hp.b, MonsterType.a,
+    DoStuff.DoStuffProc, UpdateMonster.UpdateMonsterProc, TeleportCounter.b)
+Procedure InitPlayer(*Player.TMonster, *Tile.TTile, Sprite.u, Hp.b)
+  InitMonster(*Player, *Tile, Sprite, Hp, #Player, #Null, #Null, 0)
+EndProcedure
+Declare ReplaceTile(NewTileType.a, x.w, y.w)
+Procedure StartLevel(StartingHp.a)
+  SpawnRate = 15 : SpawnCounter = SpawnRate : GenerateLevel()
+  *RandomPassableTile.TTile = RandomPassableTile()
+  InitPlayer(@Player, *RandomPassableTile, #SpritePlayer, StartingHp)
+  *RandomPassableTile = RandomPassableTile()
+  ReplaceTile(#Exit, *RandomPassableTile\x, *RandomPassableTile\y)
+EndProcedure
+Procedure StepOnExit(*Tile.TTile, *Monster.TMonster)
+  If *Monster\MonsterType = #Player
+    If Level = NumLevels
+      ShowTitle()
+    Else
+      Player\Hp + 1 : If Player\Hp > MaxHp : Player\Hp = MaxHp : EndIf
+      Level + 1 : StartLevel(Player\Hp)
+    EndIf
+  EndIf
+EndProcedure
+Procedure ReplaceTile(NewTileType.a, x.w, y.w)
+  If NewTileType = #Floor
+    Tiles(x, y)\Sprite = #SpriteFloor : Tiles(x, y)\Passable = #True : Tiles(x, y)\TileType = #Floor
+  ElseIf NewTileType = #Wall
+    Tiles(x, y)\Sprite = #SpriteWall : Tiles(x, y)\Passable = #False : Tiles(x, y)\TileType = #Wall
+  ElseIf NewTileType = #Exit
+    Tiles(x, y)\Sprite = #SpriteExit : Tiles(x, y)\Passable = #True : Tiles(x, y)\TileType = #Exit
+    Tiles(x, y)\StepOn = @StepOnExit()
+  EndIf
+EndProcedure
+Procedure MoveMonster(*Monster.TMonster, *NewTile.TTile)
+  If *Monster\Tile <> #Null : *Monster\Tile\Monster = #Null : EndIf
+  *Monster\Tile = *NewTile : *NewTile\Monster = *Monster
+  If *NewTile\StepOn <> #Null
+    *NewTile\StepOn(*NewTile, *Monster)
+  EndIf
+EndProcedure
+Procedure InitMonster(*Monster.TMonster, *Tile.TTile, Sprite.u, Hp.b, MonsterType.a,
+    DoStuff.DoStuffProc, UpdateMonster.UpdateMonsterProc, TeleportCounter.b)
+  *Monster\Sprite = Sprite : *Monster\Hp = Hp : *Monster\MonsterType = MonsterType
+  *Monster\Dead = #False : *Monster\DoStuff = DoStuff : *Monster\AttackedThisTurn = #False : *Monster\Stunned = #False
+  *Monster\Update = UpdateMonster : *Monster\TeleportCounter = TeleportCounter
+  MoveMonster(*Monster, *Tile)
+EndProcedure
+Declare.a GetTileDistance(*TileA.TTile, *TileB.TTile) : Declare.a TryMonsterMove(*Monster.TMonster, Dx.w, Dy.w)
 Procedure DoMonsterStuff(*Monster.TMonster)
   NewList AdjacentPassableNeighbors.i()
   GetTileAdjacentPassableNeighbors(*Monster\Tile, AdjacentPassableNeighbors())
@@ -114,18 +201,57 @@ Procedure DoSnakeStuff(*Snake.TMonster)
   *Snake\AttackedThisTurn = #False : DoMonsterStuff(*Snake)
   If Not *Snake\AttackedThisTurn : DoMonsterStuff(*Snake) : EndIf
 EndProcedure
-Procedure ReplaceTile(NewTileType.a, x.w, y.w)
-  If NewTileType = #Floor
-    Tiles(x, y)\Sprite = #SpriteFloor : Tiles(x, y)\Passable = #True : Tiles(x, y)\TileType = #Floor
-  ElseIf NewTileType = #Wall
-    Tiles(x, y)\Sprite = #SpriteWall : Tiles(x, y)\Passable = #False : Tiles(x, y)\TileType = #Wall
+Declare UpdateMonster(*Monster.TMonster)
+Procedure UpdateTankMonster(*Monster.TMonster)
+  StartStunned.a = *Monster\Stunned : UpdateMonster(*Monster)
+  If Not StartStunned : *Monster\Stunned = #True : EndIf
+EndProcedure
+Declare DoEaterSuff(*Eater.TMonster) : Declare DoJesterStuff(*Jester.TMonster)
+Procedure.i InitAMonster(*Tile.TTile, MonsterType.a)
+  AddElement(Monsters())
+  Select MonsterType
+    Case #Player
+    Case #Bird : InitMonster(@Monsters(), *Tile, #SpriteBird, 3, #Bird, @DoMonsterStuff(), @UpdateMonster(), 2)
+    Case #Snake : InitMonster(@Monsters(), *Tile, #SpriteSnake, 1, #Snake, @DoSnakeStuff(), @UpdateMonster(), 2)
+    Case #Tank : InitMonster(@Monsters(), *Tile, #SpriteTank, 2, #Tank, @DoMonsterStuff(), @UpdateTankMonster(), 2)
+    Case #Eater : InitMonster(@Monsters(), *Tile, #SpriteEater, 1, #Eater, @DoEaterSuff(), @UpdateMonster(), 2)
+    Case #Jester : InitMonster(@Monsters(), *Tile, #SpriteJester, 2, #Jester, @DoJesterStuff(), @UpdateMonster(), 2)
+  EndSelect
+  ProcedureReturn @Monsters()
+EndProcedure
+Procedure.i SpawnMonster()
+  ProcedureReturn InitAMonster(RandomPassableTile(), Random(#Jester, #Bird))
+EndProcedure
+Procedure GenerateMonsters()
+  ClearList(Monsters()) : NumMonsters.u = Level + 1
+  For i.u = 1 To NumMonsters : SpawnMonster() : Next i
+EndProcedure
+Procedure.a GetTileDistance(*TileA.TTile, *TileB.TTile)
+  ProcedureReturn Abs(*TileA\x - *TileB\x) + Abs(*TileA\y - *TileB\y)
+EndProcedure
+Procedure DieMonster(*Monster.TMonster)
+  *Monster\Dead = #True : *Monster\Tile\Monster = #Null : *Monster\Sprite = #SpritePlayerDeath
+EndProcedure
+Procedure HitMonster(*Monster.TMonster, Damage.a)
+  *Monster\hp - Damage
+  If *Monster\hp <= 0 : DieMonster(*Monster) : EndIf
+EndProcedure
+Procedure.a TryMonsterMove(*Monster.TMonster, Dx.w, Dy.w)
+  *NewTile.TTile = GetTileNeighbor(*Monster\Tile, Dx, Dy)
+  If *NewTile <> #Null And *NewTile\Passable
+    If *NewTile\Monster = #Null
+      MoveMonster(*Monster, *NewTile)
+    Else
+      If *Monster\MonsterType = #Player Or *NewTile\Monster\MonsterType = #Player
+         *Monster\AttackedThisTurn = #True : *NewTile\Monster\Stunned = #True : HitMonster(*NewTile\Monster, 1)
+      EndIf
+    EndIf
+    ProcedureReturn #True
   EndIf
+  ProcedureReturn #False
 EndProcedure
 Procedure HealMonsterEater(*Eater.TMonster, Damage.f)
   *Eater\Hp + Damage : If *Eater\Hp > MaxHp : *Eater\Hp = MaxHp : EndIf
-EndProcedure
-Procedure.a InBounds(x.w, y.w)
-  ProcedureReturn Bool(x > 0 And y > 0 And x < NumTiles - 1 And y < NumTiles - 1)
 EndProcedure
 Procedure DoEaterSuff(*Eater.TMonster)
   NewList AdjacentNeighbors.i()
@@ -150,47 +276,11 @@ Procedure UpdateMonster(*Monster.TMonster)
   EndIf
   If *Monster\DoStuff <> #Null : *Monster\DoStuff(*Monster) : EndIf
 EndProcedure
-Procedure UpdateTankMonster(*Monster.TMonster)
-  StartStunned.a = *Monster\Stunned : UpdateMonster(*Monster)
-  If Not StartStunned : *Monster\Stunned = #True : EndIf
-EndProcedure
 Procedure DoJesterStuff(*Jester.TMonster)
   NewList Neighbors.i() : GetTileAdjacentPassableNeighbors(*Jester\Tile, Neighbors())
   If ListSize(Neighbors()) > 0 : RandomizeList(Neighbors()) : FirstElement(Neighbors()) : *NewTile.TTile = Neighbors()
     TryMonsterMove(*Jester, *NewTile\x - *Jester\Tile\x, *NewTile\y - *Jester\Tile\y)
   EndIf
-EndProcedure
-Procedure.i InitAMonster(*Tile.TTile, MonsterType.a)
-  AddElement(Monsters())
-  Select MonsterType
-    Case #Player
-    Case #Bird : InitMonster(@Monsters(), *Tile, #SpriteBird, 3, #Bird, @DoMonsterStuff(), @UpdateMonster(), 2)
-    Case #Snake : InitMonster(@Monsters(), *Tile, #SpriteSnake, 1, #Snake, @DoSnakeStuff(), @UpdateMonster(), 2)
-    Case #Tank : InitMonster(@Monsters(), *Tile, #SpriteTank, 2, #Tank, @DoMonsterStuff(), @UpdateTankMonster(), 2)
-    Case #Eater : InitMonster(@Monsters(), *Tile, #SpriteEater, 1, #Eater, @DoEaterSuff(), @UpdateMonster(), 2)
-    Case #Jester : InitMonster(@Monsters(), *Tile, #SpriteJester, 2, #Jester, @DoJesterStuff(), @UpdateMonster(), 2)
-  EndSelect
-  ProcedureReturn @Monsters()
-EndProcedure
-Procedure GetRandomPassableTile()
-  x.w = Random(NumTiles - 1, 0) : y = Random(NumTiles - 1, 0)
-  *RandomPassableTile = GetTile(x, y)
-  ProcedureReturn Bool(*RandomPassableTile\Passable And Not *RandomPassableTile\Monster)
-EndProcedure
-Procedure TryTo(Description.s, Callback.CallbackProc)
-  For i.u = 1000 To 1 Step -1
-    If Callback()
-      ProcedureReturn
-    EndIf
-  Next i
-  RaiseError(#PB_OnError_IllegalInstruction)
-EndProcedure
-Procedure.i RandomPassableTile()
-  TryTo("get random passable tile", @GetRandomPassableTile())
-  ProcedureReturn *RandomPassableTile
-EndProcedure
-Procedure.i SpawnMonster()
-  ProcedureReturn InitAMonster(RandomPassableTile(), Random(#Jester, #Bird))
 EndProcedure
 Procedure Tick()
   ForEach Monsters()
@@ -211,62 +301,8 @@ EndProcedure
 Procedure.a TryPlayerMonsterMove(*Player.TMonster, Dx.w, Dy.w)
   If TryMonsterMove(Player, Dx, Dy) : Tick() : EndIf
 EndProcedure
-Procedure GenerateMonsters()
-  ClearList(Monsters()) : NumMonsters.u = Level + 1
-  For i.u = 1 To NumMonsters : SpawnMonster() : Next i
-EndProcedure
-Procedure InitPlayer(*Player.TMonster, *Tile.TTile, Sprite.u, Hp.b)
-  InitMonster(*Player, *Tile, Sprite, Hp, #Player, #Null, #Null, 0)
-EndProcedure
 Procedure DrawTile(*Tile.TTile)
   DrawSprite(*Tile\Sprite, *Tile\x, *Tile\y)
-EndProcedure
-Procedure GetTileConnectedTiles(*Tile.TTile, List ConnectedTiles.i())
-  ClearList(ConnectedTiles()) : AddElement(ConnectedTiles()) : ConnectedTiles() = *Tile
-  NewList TilesToCheck.i() : 
-  AddElement(TilesToCheck()) : 
-  TilesToCheck() = *Tile : 
-  ResetList(TilesToCheck())
-  While(NextElement(TilesToCheck()))
-    *CurrentTile.TTile = TilesToCheck() : FirstElement(TilesToCheck()) : DeleteElement(TilesToCheck())
-    NewList PassableNeighbors.i() : GetTileAdjacentPassableNeighbors(*CurrentTile, PassableNeighbors())
-    ForEach ConnectedTiles()
-      ForEach PassableNeighbors()
-        If PassableNeighbors() = ConnectedTiles()
-          DeleteElement(PassableNeighbors())
-        EndIf
-      Next
-    Next
-    NewList CopyPassableNeighBors() : CopyList(PassableNeighbors(), CopyPassableNeighBors())
-    MergeLists(PassableNeighbors(), ConnectedTiles()) : MergeLists(CopyPassableNeighBors(), TilesToCheck())
-    ResetList(TilesToCheck())
-  Wend
-EndProcedure
-Procedure.u GenerateTiles()
-  NumPassableTiles.u = 0
-  For i.w = 0 To NumTiles - 1
-    For j.w = 0 To NumTiles - 1
-      If (Random(100, 0) / 100.0 < 0.3) Or (Not InBounds(i, j))
-        Tiles(i, j)\x = i : Tiles(i, j)\y = j : Tiles(i, j)\Sprite = #SpriteWall : Tiles(i, j)\Passable = #False
-        Tiles(i, j)\TileType = #Wall
-      Else
-        Tiles(i, j)\x = i : Tiles(i, j)\y = j : Tiles(i, j)\Sprite = #SpriteFloor : Tiles(i, j)\Passable = #True
-        Tiles(i, j)\TileType = #Floor : NumPassableTiles + 1
-      EndIf
-      Tiles(i, j)\Monster = #Null
-    Next j
-  Next i
-  ProcedureReturn NumPassableTiles
-EndProcedure
-Procedure GenerateMap()
-  PassableTiles.u = GenerateTiles()
-  *RandomPassableTile = RandomPassableTile() : NewList ConnectedTiles.i()
-  GetTileConnectedTiles(*RandomPassableTile, ConnectedTiles())
-  ProcedureReturn Bool(PassableTiles = ListSize(ConnectedTiles()))
-EndProcedure
-Procedure GenerateLevel()
-  TryTo("generate map", @GenerateMap())
-  GenerateMonsters()
 EndProcedure
 Procedure PlaySoundEffect(Sound.a)
   If SoundInitiated And Not SoundMuted
@@ -276,11 +312,6 @@ EndProcedure
 Procedure LoadSounds()
   If SoundInitiated
   EndIf
-EndProcedure
-Procedure StartLevel(StartingHp.a)
-  SpawnRate = 15 : SpawnCounter = SpawnRate : GenerateLevel()
-  *RandomPassableTile.TTile = RandomPassableTile()
-  InitPlayer(@Player, *RandomPassableTile, #SpritePlayer, StartingHp)
 EndProcedure
 Declare RenderFrame()
 Procedure StartGame()
@@ -301,10 +332,6 @@ Procedure DrawBitmapText(x.f, y.f, Text.s, CharWidthPx.a = 16, CharHeightPx.a = 
   Next
 EndProcedure
 Procedure DrawHUD()
-EndProcedure
-Procedure ShowTitle()
-  DisplayTransparentSprite(#TitleBackground, 0, 0)
-  GameState = "title"
 EndProcedure
 Procedure UpdateKeyBoard(Elapsed.f)
   ReleasedW = KeyboardReleased(#PB_Key_W) : ReleasedS = KeyboardReleased(#PB_Key_S) : ReleasedA = KeyboardReleased(#PB_Key_A)
