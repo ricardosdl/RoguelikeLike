@@ -6,12 +6,12 @@ Enumeration MonsterTypes : #Player : #Bird : #Snake : #Tank : #Eater : #Jester :
 Prototype DoStuffProc(*Monster) : Prototype UpdateMonsterProc(*Monster)
 Structure TMonster
   *Tile.TTile : Sprite.u : Hp.f : MonsterType.a : Dead.a : DoStuff.DoStuffProc : AttackedThisTurn.a
-  Stunned.a : Update.UpdateMonsterProc
+  Stunned.a : Update.UpdateMonsterProc : TeleportCounter.b
 EndStructure
 Enumeration GameResources : #SpriteSheet : #TitleBackground :  EndEnumeration
 Enumeration GameSprites
   #SpritePlayer : #SpritePlayerDeath : #SpriteFloor : #SpriteWall : #SpriteBird : #SpriteSnake : #SpriteTank
-  #SpriteEater : #SpriteJester : #SpriteHp
+  #SpriteEater : #SpriteJester : #SpriteHp : #SpriteTeleport
 EndEnumeration
 Prototype.a CallBackProc();our callback prototype
 Global PlayerX.w = 0, PlayerY.w = 0
@@ -32,10 +32,11 @@ Procedure MoveMonster(*Monster.TMonster, *NewTile.TTile)
   If *Monster\Tile <> #Null : *Monster\Tile\Monster = #Null : EndIf
   *Monster\Tile = *NewTile : *NewTile\Monster = *Monster
 EndProcedure
-Procedure InitMonster(*Monster.TMonster, *Tile.TTile, Sprite.u, Hp.b, MonsterType.a, DoStuff.DoStuffProc, UpdateMonster.UpdateMonsterProc)
+Procedure InitMonster(*Monster.TMonster, *Tile.TTile, Sprite.u, Hp.b, MonsterType.a,
+    DoStuff.DoStuffProc, UpdateMonster.UpdateMonsterProc, TeleportCounter.b)
   MoveMonster(*Monster, *Tile) : *Monster\Sprite = Sprite : *Monster\Hp = Hp : *Monster\MonsterType = MonsterType
   *Monster\Dead = #False : *Monster\DoStuff = DoStuff : *Monster\AttackedThisTurn = #False : *Monster\Stunned = #False
-  *Monster\Update = UpdateMonster
+  *Monster\Update = UpdateMonster : *Monster\TeleportCounter = TeleportCounter
 EndProcedure
 Procedure.i GetTile(x.w, y.w)
   If (x < 0 Or x > NumTiles - 1) Or (y < 0 Or y > NumTiles -1)
@@ -143,7 +144,8 @@ Procedure DoEaterSuff(*Eater.TMonster)
   EndIf
 EndProcedure
 Procedure UpdateMonster(*Monster.TMonster)
-  If *Monster\Stunned
+  If *Monster\TeleportCounter > 0 : *Monster\TeleportCounter - 1 : EndIf
+  If *Monster\Stunned Or *Monster\TeleportCounter > 0
     *Monster\Stunned = #False : ProcedureReturn
   EndIf
   If *Monster\DoStuff <> #Null : *Monster\DoStuff(*Monster) : EndIf
@@ -162,11 +164,11 @@ Procedure.i InitAMonster(*Tile.TTile, MonsterType.a)
   AddElement(Monsters())
   Select MonsterType
     Case #Player
-    Case #Bird : InitMonster(@Monsters(), *Tile, #SpriteBird, 3, #Bird, @DoMonsterStuff(), @UpdateMonster())
-    Case #Snake : InitMonster(@Monsters(), *Tile, #SpriteSnake, 1, #Snake, @DoSnakeStuff(), @UpdateMonster())
-    Case #Tank : InitMonster(@Monsters(), *Tile, #SpriteTank, 2, #Tank, @DoMonsterStuff(), @UpdateTankMonster())
-    Case #Eater : InitMonster(@Monsters(), *Tile, #SpriteEater, 1, #Eater, @DoEaterSuff(), @UpdateMonster())
-    Case #Jester : InitMonster(@Monsters(), *Tile, #SpriteJester, 2, #Jester, @DoJesterStuff(), @UpdateMonster())
+    Case #Bird : InitMonster(@Monsters(), *Tile, #SpriteBird, 3, #Bird, @DoMonsterStuff(), @UpdateMonster(), 2)
+    Case #Snake : InitMonster(@Monsters(), *Tile, #SpriteSnake, 1, #Snake, @DoSnakeStuff(), @UpdateMonster(), 2)
+    Case #Tank : InitMonster(@Monsters(), *Tile, #SpriteTank, 2, #Tank, @DoMonsterStuff(), @UpdateTankMonster(), 2)
+    Case #Eater : InitMonster(@Monsters(), *Tile, #SpriteEater, 1, #Eater, @DoEaterSuff(), @UpdateMonster(), 2)
+    Case #Jester : InitMonster(@Monsters(), *Tile, #SpriteJester, 2, #Jester, @DoJesterStuff(), @UpdateMonster(), 2)
   EndSelect
   ProcedureReturn @Monsters()
 EndProcedure
@@ -214,7 +216,7 @@ Procedure GenerateMonsters()
   For i.u = 1 To NumMonsters : SpawnMonster() : Next i
 EndProcedure
 Procedure InitPlayer(*Player.TMonster, *Tile.TTile, Sprite.u, Hp.b)
-  InitMonster(*Player, *Tile, Sprite, Hp, #Player, #Null, #Null)
+  InitMonster(*Player, *Tile, Sprite, Hp, #Player, #Null, #Null, 0)
 EndProcedure
 Procedure DrawTile(*Tile.TTile)
   DrawSprite(*Tile\Sprite, *Tile\x, *Tile\y)
@@ -347,11 +349,15 @@ CompilerIf #PB_Compiler_Processor = #PB_Processor_JavaScript
   BindEvent(#PB_Event_Loading, @Loading()) : BindEvent(#PB_Event_LoadingError, @LoadingError())
 CompilerEndIf
 Procedure DrawMonster(*Monster.TMonster)
-  DrawSprite(*Monster\Sprite, *Monster\Tile\x, *Monster\Tile\y)
-  For i.b = 0 To *Monster\Hp - 1;draw hp
-    ii.b = (i % 3) : Hpx.f = *Monster\Tile\x + (ii) * (5 / 16)
-    DrawSprite(#SpriteHp, Hpx, *Monster\Tile\y - Round( i / 3, #PB_Round_Down) * (5 /16))
-  Next
+  If *Monster\TeleportCounter > 0
+    DrawSprite(#SpriteTeleport, *Monster\Tile\x, *Monster\Tile\y)
+  Else
+    DrawSprite(*Monster\Sprite, *Monster\Tile\x, *Monster\Tile\y)
+    For i.b = 0 To *Monster\Hp - 1;draw hp
+      ii.b = (i % 3) : Hpx.f = *Monster\Tile\x + (ii) * (5 / 16)
+      DrawSprite(#SpriteHp, Hpx, *Monster\Tile\y - Round( i / 3, #PB_Round_Down) * (5 /16))
+    Next
+  EndIf
 EndProcedure
 Procedure Draw()
   If GameState = "running" Or GameState = "dead"
