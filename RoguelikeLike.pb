@@ -19,7 +19,7 @@ Global TileSize.a = 64, NumTiles.u = 9, UIWidth.u = 4, GameWidth.u = TileSize * 
 Global BasePath.s = "data" + #PS$, ElapsedTimneInS.f, LastTimeInMs.q
 Global Dim Tiles.TTile(NumTiles - 1, NumTiles - 1), *RandomPassableTile.TTile
 Global Level.a, Player.TMonster, NewList Monsters.TMonster(), MaxHp.a = 6, GameState.s = "loading", StartingHp.a = 3, NumLevels.a = 6
-
+Global SpawnCounter.w, SpawnRate.w
 
 Procedure LoadSprites()
   LoadSprite(#SpriteSheet, BasePath + "graphics" + #PS$ + "spritesheet.png", #PB_Sprite_AlphaBlending)
@@ -170,18 +170,10 @@ Procedure.i InitAMonster(*Tile.TTile, MonsterType.a)
   EndSelect
   ProcedureReturn @Monsters()
 EndProcedure
-Procedure Tick()
-  ForEach Monsters()
-    If Monsters()\hp > 0
-      Monsters()\Update(@Monsters())
-    Else
-      DeleteElement(Monsters())
-    EndIf
-  Next
-  If Player\Dead : GameState = "dead" : EndIf
-EndProcedure
-Procedure.a TryPlayerMonsterMove(*Player.TMonster, Dx.w, Dy.w)
-  If TryMonsterMove(Player, Dx, Dy) : Tick() : EndIf
+Procedure GetRandomPassableTile()
+  x.w = Random(NumTiles - 1, 0) : y = Random(NumTiles - 1, 0)
+  *RandomPassableTile = GetTile(x, y)
+  ProcedureReturn Bool(*RandomPassableTile\Passable And Not *RandomPassableTile\Monster)
 EndProcedure
 Procedure TryTo(Description.s, Callback.CallbackProc)
   For i.u = 1000 To 1 Step -1
@@ -191,17 +183,31 @@ Procedure TryTo(Description.s, Callback.CallbackProc)
   Next i
   RaiseError(#PB_OnError_IllegalInstruction)
 EndProcedure
-Procedure GetRandomPassableTile()
-  x.w = Random(NumTiles - 1, 0) : y = Random(NumTiles - 1, 0)
-  *RandomPassableTile = GetTile(x, y)
-  ProcedureReturn Bool(*RandomPassableTile\Passable And Not *RandomPassableTile\Monster)
-EndProcedure
 Procedure.i RandomPassableTile()
   TryTo("get random passable tile", @GetRandomPassableTile())
   ProcedureReturn *RandomPassableTile
 EndProcedure
 Procedure.i SpawnMonster()
   ProcedureReturn InitAMonster(RandomPassableTile(), Random(#Jester, #Bird))
+EndProcedure
+Procedure Tick()
+  ForEach Monsters()
+    If Monsters()\hp > 0
+      Monsters()\Update(@Monsters())
+    Else
+      DeleteElement(Monsters())
+    EndIf
+  Next
+  If Player\Dead : GameState = "dead" : EndIf
+  
+  SpawnCounter - 1
+  If SpawnCounter <= 0
+    SpawnMonster() : SpawnCounter = SpawnRate : SpawnRate - 1
+  EndIf
+  
+EndProcedure
+Procedure.a TryPlayerMonsterMove(*Player.TMonster, Dx.w, Dy.w)
+  If TryMonsterMove(Player, Dx, Dy) : Tick() : EndIf
 EndProcedure
 Procedure GenerateMonsters()
   ClearList(Monsters()) : NumMonsters.u = Level + 1
@@ -270,7 +276,7 @@ Procedure LoadSounds()
   EndIf
 EndProcedure
 Procedure StartLevel(StartingHp.a)
-  GenerateLevel()
+  SpawnRate = 15 : SpawnCounter = SpawnRate : GenerateLevel()
   *RandomPassableTile.TTile = RandomPassableTile()
   InitPlayer(@Player, *RandomPassableTile, #SpritePlayer, StartingHp)
 EndProcedure
