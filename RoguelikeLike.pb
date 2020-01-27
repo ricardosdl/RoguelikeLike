@@ -8,7 +8,7 @@ Structure TMonster
   *Tile.TTile : Sprite.u : Hp.f : MonsterType.a : Dead.a : DoStuff.DoStuffProc : AttackedThisTurn.a
   Stunned.a : Update.UpdateMonsterProc
 EndStructure
-Enumeration GameResources : #SpriteSheet :  EndEnumeration
+Enumeration GameResources : #SpriteSheet : #TitleBackground :  EndEnumeration
 Enumeration GameSprites
   #SpritePlayer : #SpritePlayerDeath : #SpriteFloor : #SpriteWall : #SpriteBird : #SpriteSnake : #SpriteTank
   #SpriteEater : #SpriteJester : #SpriteHp
@@ -18,10 +18,12 @@ Global PlayerX.w = 0, PlayerY.w = 0
 Global TileSize.a = 64, NumTiles.u = 9, UIWidth.u = 4, GameWidth.u = TileSize * (NumTiles + UIWidth), GameHeight.u = TileSize * NumTiles,ExitGame.a = #False, SoundMuted.a = #False
 Global BasePath.s = "data" + #PS$, ElapsedTimneInS.f, LastTimeInMs.q
 Global Dim Tiles.TTile(NumTiles - 1, NumTiles - 1), *RandomPassableTile.TTile
-Global Level.a, Player.TMonster, NewList Monsters.TMonster(), MaxHp.a = 6
+Global Level.a, Player.TMonster, NewList Monsters.TMonster(), MaxHp.a = 6, GameState.s = "loading", StartingHp.a = 3, NumLevels.a = 6
+
 
 Procedure LoadSprites()
-  LoadSprite(#SpriteSheet, BasePath + "graphics" + #PS$ + "spritesheet.png")
+  LoadSprite(#SpriteSheet, BasePath + "graphics" + #PS$ + "spritesheet.png", #PB_Sprite_AlphaBlending)
+  LoadSprite(#TitleBackground, BasePath + "graphics" + #PS$ + "title-background.png", #PB_Sprite_AlphaBlending)
 EndProcedure
 Procedure DrawSprite(SpriteIndex.u, x.f, y.f)
   ClipSprite(#SpriteSheet, SpriteIndex * 16, 0, 16, 16) : ZoomSprite(#SpriteSheet, TileSize, TileSize) : DisplayTransparentSprite(#SpriteSheet, x * TileSize, y * TileSize)
@@ -176,6 +178,7 @@ Procedure Tick()
       DeleteElement(Monsters())
     EndIf
   Next
+  If Player\Dead : GameState = "dead" : EndIf
 EndProcedure
 Procedure.a TryPlayerMonsterMove(*Player.TMonster, Dx.w, Dy.w)
   If TryMonsterMove(Player, Dx, Dy) : Tick() : EndIf
@@ -201,7 +204,7 @@ Procedure.i SpawnMonster()
   ProcedureReturn InitAMonster(RandomPassableTile(), Random(#Jester, #Bird))
 EndProcedure
 Procedure GenerateMonsters()
-  NumMonsters.u = Level + 1
+  ClearList(Monsters()) : NumMonsters.u = Level + 1
   For i.u = 1 To NumMonsters : SpawnMonster() : Next i
 EndProcedure
 Procedure InitPlayer(*Player.TMonster, *Tile.TTile, Sprite.u, Hp.b)
@@ -266,15 +269,18 @@ Procedure LoadSounds()
   If SoundInitiated
   EndIf
 EndProcedure
+Procedure StartLevel(StartingHp.a)
+  GenerateLevel()
+  *RandomPassableTile.TTile = RandomPassableTile()
+  InitPlayer(@Player, *RandomPassableTile, #SpritePlayer, StartingHp)
+EndProcedure
 Declare RenderFrame()
-Procedure StartGame(IsNextLevel.b)
+Procedure StartGame()
   CompilerIf #PB_Compiler_Processor = #PB_Processor_JavaScript
     BindEvent(#PB_Event_RenderFrame, @RenderFrame())
     FlipBuffers()
   CompilerEndIf
-  Level = 1 : GenerateLevel()
-  *RandomPassableTile.TTile = RandomPassableTile()
-  InitPlayer(@Player, *RandomPassableTile, #SpritePlayer, 3)
+  Level = 1 : StartLevel(StartingHp) : GameState = "running"
 EndProcedure
 Procedure DrawBitmapText(x.f, y.f, Text.s, CharWidthPx.a = 16, CharHeightPx.a = 24);draw text is too slow on linux, let's try to use bitmap fonts
   ClipSprite(Bitmap_Font_Sprite, #PB_Default, #PB_Default, #PB_Default, #PB_Default)
@@ -288,12 +294,26 @@ Procedure DrawBitmapText(x.f, y.f, Text.s, CharWidthPx.a = 16, CharHeightPx.a = 
 EndProcedure
 Procedure DrawHUD()
 EndProcedure
-
+Procedure ShowTitle()
+  DisplayTransparentSprite(#TitleBackground, 0, 0)
+  GameState = "title"
+EndProcedure
 Procedure UpdateKeyBoard(Elapsed.f)
-  If KeyboardReleased(#PB_Key_W) : TryPlayerMonsterMove(@Player, 0, -1) : EndIf
-  If KeyboardReleased(#PB_Key_S) : TryPlayerMonsterMove(@Player, 0, 1) : EndIf
-  If KeyboardReleased(#PB_Key_A) : TryPlayerMonsterMove(@Player, -1, 0) : EndIf
-  If KeyboardReleased(#PB_Key_D) : TryPlayerMonsterMove(@Player, 1, 0) : EndIf
+  ReleasedW = KeyboardReleased(#PB_Key_W) : ReleasedS = KeyboardReleased(#PB_Key_S) : ReleasedA = KeyboardReleased(#PB_Key_A)
+  ReleasedD = KeyboardReleased(#PB_Key_D)
+  If KeyboardReleased(#PB_Key_All) Or (ReleasedW Or ReleasedS Or ReleasedA Or ReleasedD)
+    If GameState = "title"
+      StartGame()
+    ElseIf GameState = "dead"
+      ShowTitle()
+    EndIf
+  EndIf
+  If GameState = "running"
+    If ReleasedW : TryPlayerMonsterMove(@Player, 0, -1) : EndIf
+    If ReleasedS : TryPlayerMonsterMove(@Player, 0, 1) : EndIf
+    If ReleasedA : TryPlayerMonsterMove(@Player, -1, 0) : EndIf
+    If ReleasedD : TryPlayerMonsterMove(@Player, 1, 0) : EndIf
+  EndIf
 EndProcedure
 If InitSprite() = 0 Or InitKeyboard() = 0
   CompilerIf #PB_Compiler_Processor = #PB_Processor_JavaScript
@@ -307,7 +327,7 @@ Procedure Loading()
   Static LoadedElements.a
   LoadedElements + 1
   If LoadedElements = 10
-    StartGame(#False)
+    StartGame()
   EndIf
 EndProcedure
 Procedure LoadingError(Type, Filename$)
@@ -328,18 +348,20 @@ Procedure DrawMonster(*Monster.TMonster)
   Next
 EndProcedure
 Procedure Draw()
-  ClearScreen(RGB(0,0,0))
-  For i.w = 0 To NumTiles - 1
-    For j.w = 0 To NumTiles - 1
-      *Tile.TTile = GetTile(i, j)
-      If *Tile = #Null : Continue;the tile is out of the visible screen
-      Else
-        DrawTile(*Tile)
-      EndIf
-    Next j
-  Next i
-  ForEach Monsters() : DrawMonster(@Monsters()) : Next
-  DrawMonster(@Player) : DrawHUD()
+  If GameState = "running" Or GameState = "dead"
+    ClearScreen(RGB(0,0,0))
+    For i.w = 0 To NumTiles - 1
+      For j.w = 0 To NumTiles - 1
+        *Tile.TTile = GetTile(i, j)
+        If *Tile = #Null : Continue;the tile is out of the visible screen
+        Else
+          DrawTile(*Tile)
+        EndIf
+      Next j
+    Next i
+    ForEach Monsters() : DrawMonster(@Monsters()) : Next
+    DrawMonster(@Player) : DrawHUD()
+  EndIf
 EndProcedure
 Procedure RenderFrame()
   ElapsedTimneInS = (ElapsedMilliseconds() - LastTimeInMs) / 1000.0
@@ -365,7 +387,7 @@ If OpenWindow(0, 0, 0, GameWidth, GameHeight, "RoguelikeLike", #PB_Window_System
     LoadSprites()
     LoadSounds()
     CompilerIf #PB_Compiler_Processor <> #PB_Processor_JavaScript
-      StartGame(#False)
+      ShowTitle()
     CompilerEndIf
     
     LastTimeInMs = ElapsedMilliseconds()
