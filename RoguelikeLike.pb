@@ -14,14 +14,36 @@ Enumeration GameSprites
   #SpritePlayer : #SpritePlayerDeath : #SpriteFloor : #SpriteWall : #SpriteBird : #SpriteSnake : #SpriteTank
   #SpriteEater : #SpriteJester : #SpriteHp : #SpriteTeleport : #SpriteExit : #SpriteTreasure
 EndEnumeration
+Structure TScore
+  Score.u : Run.u : TotalScore.l : Active.a
+EndStructure
 Prototype.a CallBackProc();our callback prototype
 Global PlayerX.w = 0, PlayerY.w = 0
 Global TileSize.a = 64, NumTiles.u = 9, UIWidth.u = 4, GameWidth.u = TileSize * (NumTiles + UIWidth), GameHeight.u = TileSize * NumTiles,ExitGame.a = #False, SoundMuted.a = #False
 Global BasePath.s = "data" + #PS$, ElapsedTimneInS.f, LastTimeInMs.q
 Global Dim Tiles.TTile(NumTiles - 1, NumTiles - 1), *RandomPassableTile.TTile
 Global Level.a, Player.TMonster, NewList Monsters.TMonster(), MaxHp.a = 6, GameState.s = "loading", StartingHp.a = 3, NumLevels.a = 6
-Global SpawnCounter.w, SpawnRate.w, Score.a
+Global SpawnCounter.w, SpawnRate.w, Score.a, NewList Scores.TScore()
 
+Procedure GetScores(List ReturnedScores.TScore())
+  ClearList(ReturnedScores()) : CopyList(Scores(), ReturnedScores())
+EndProcedure
+Procedure AddScore(Score.a, Won.a)
+  NewList TheScores.TScore() : GetScores(TheScores())
+  NewScore.TScore\Score = Score : NewScore\Run = 1 : NewScore\TotalScore = Score : NewScore\Active = Won
+  IsEmpty.a = Bool(Not LastElement(TheScores()))
+  If Not IsEmpty
+    LastScore.TScore = TheScores() : DeleteElement(TheScores(), #True)
+    If LastScore\Active
+      NewScore\Run = LastScore\Run + 1
+      NewScore\TotalScore + LastScore\TotalScore
+    Else
+      AddElement(TheScores()) : TheScores() = LastScore
+    EndIf
+  EndIf
+  AddElement(TheScores()) : TheScores() = NewScore
+  ClearList(Scores()) : CopyList(TheScores(), Scores())
+EndProcedure
 Procedure LoadSprites()
   LoadSprite(#SpriteSheet, BasePath + "graphics" + #PS$ + "spritesheet.png", #PB_Sprite_AlphaBlending)
   LoadSprite(#TitleBackground, BasePath + "graphics" + #PS$ + "title-background.png", #PB_Sprite_AlphaBlending)
@@ -40,12 +62,38 @@ Procedure DrawBitmapText(x.f, y.f, Text.s, CharWidthPx.a = 16, CharHeightPx.a = 
     DisplayTransparentSprite(#Bitmap_Font_Sprite, x + (i - 1) * CharWidthPx, y)
   Next
 EndProcedure
+Procedure.s RightPad(TextList.s)
+  FinalText.s = "" : QtdTexts.a = CountString(TextList, "|") + 1
+  For j = 1 To QtdTexts
+    Text.s = StringField(TextList, j, "|")
+    For i = Len(Text) To 10 - 1
+      Text = Text + " "
+    Next i
+    FinalText = FinalText + Text
+  Next
+  ProcedureReturn FinalText
+EndProcedure
+Procedure DrawScores()
+  NewList TheScores.TScore() : GetScores(TheScores())
+  If ListSize(TheScores()) > 0 : Header.s = RightPad("RUN|SCORE|TOTAL")
+    DrawBitmapText((GameWidth - Len(Header) * 16) / 2, GameHeight / 2 + 20, Header)
+    LastElement(TheScores()) : NewestScore.TScore = TheScores() : DeleteElement(TheScores(), #True)
+    SortStructuredList(TheScores(), #PB_Sort_Ascending, OffsetOf(TScore\TotalScore), TypeOf(TScore\TotalScore))
+    LastElement(TheScores()) : AddElement(TheScores()) : TheScores() = NewestScore : i.u = 0
+    ForEach TheScores()
+      ScoreText.s = RightPad(Str(TheScores()\Run) + "|" + Str(TheScores()\Score) + "|" + Str(TheScores()\TotalScore))
+      DrawBitmapText((GameWidth - Len(ScoreText) * 16) / 2, GameHeight / 2 + 40 + 24 + i * 24, ScoreText)
+      i + 1
+    Next
+  EndIf
+EndProcedure
 Procedure ShowTitle()
   DisplayTransparentSprite(#TitleBackground, 0, 0)
   GameState = "title" : TitleX.f = (GameWidth - Len("Roguelike") * 32) / 2 : TitleY.f = (GameHeight / 2 - 110)
   DrawBitmapText(TitleX, TitleY, "Roguelike", 32, 48)
   TitleX = (GameWidth - Len("Like") * 48) / 2 : TitleY = (GameHeight / 2 - 50)
   DrawBitmapText(TitleX, TitleY, "Like", 48, 72)
+  DrawScores()
 EndProcedure
 Procedure.a InBounds(x.w, y.w)
   ProcedureReturn Bool(x > 0 And y > 0 And x < NumTiles - 1 And y < NumTiles - 1)
@@ -166,7 +214,7 @@ EndProcedure
 Procedure StepOnExit(*Tile.TTile, *Monster.TMonster)
   If *Monster\MonsterType = #Player
     If Level = NumLevels
-      ShowTitle()
+      AddScore(Score, #True) : ShowTitle()
     Else
       Player\Hp + 1 : If Player\Hp > MaxHp : Player\Hp = MaxHp : EndIf
       Level + 1 : StartLevel(Player\Hp)
@@ -313,7 +361,7 @@ Procedure Tick()
       DeleteElement(Monsters())
     EndIf
   Next
-  If Player\Dead : GameState = "dead" : EndIf
+  If Player\Dead : AddScore(Score, #False) : GameState = "dead" : EndIf
   
   SpawnCounter - 1
   If SpawnCounter <= 0
