@@ -1,7 +1,7 @@
 ﻿Enumeration TileTypes : #Floor : #Wall : #Exit : EndEnumeration
 Prototype StepOnTileProc(*Tile, *Monster)
 Structure TTile
-  x.w : y.w : Sprite.u : Passable.a : TileType.a : *Monster.TMonster : StepOn.StepOnTileProc
+  x.w : y.w : Sprite.u : Passable.a : TileType.a : *Monster.TMonster : StepOn.StepOnTileProc : HasTreasure.a
 EndStructure
 Enumeration MonsterTypes : #Player : #Bird : #Snake : #Tank : #Eater : #Jester : EndEnumeration
 Prototype DoStuffProc(*Monster) : Prototype UpdateMonsterProc(*Monster)
@@ -12,7 +12,7 @@ EndStructure
 Enumeration GameResources : #SpriteSheet : #TitleBackground : #Bitmap_Font_Sprite : EndEnumeration
 Enumeration GameSprites
   #SpritePlayer : #SpritePlayerDeath : #SpriteFloor : #SpriteWall : #SpriteBird : #SpriteSnake : #SpriteTank
-  #SpriteEater : #SpriteJester : #SpriteHp : #SpriteTeleport : #SpriteExit
+  #SpriteEater : #SpriteJester : #SpriteHp : #SpriteTeleport : #SpriteExit : #SpriteTreasure
 EndEnumeration
 Prototype.a CallBackProc();our callback prototype
 Global PlayerX.w = 0, PlayerY.w = 0
@@ -20,7 +20,7 @@ Global TileSize.a = 64, NumTiles.u = 9, UIWidth.u = 4, GameWidth.u = TileSize * 
 Global BasePath.s = "data" + #PS$, ElapsedTimneInS.f, LastTimeInMs.q
 Global Dim Tiles.TTile(NumTiles - 1, NumTiles - 1), *RandomPassableTile.TTile
 Global Level.a, Player.TMonster, NewList Monsters.TMonster(), MaxHp.a = 6, GameState.s = "loading", StartingHp.a = 3, NumLevels.a = 6
-Global SpawnCounter.w, SpawnRate.w
+Global SpawnCounter.w, SpawnRate.w, Score.a
 
 Procedure LoadSprites()
   LoadSprite(#SpriteSheet, BasePath + "graphics" + #PS$ + "spritesheet.png", #PB_Sprite_AlphaBlending)
@@ -50,6 +50,12 @@ EndProcedure
 Procedure.a InBounds(x.w, y.w)
   ProcedureReturn Bool(x > 0 And y > 0 And x < NumTiles - 1 And y < NumTiles - 1)
 EndProcedure
+Declare.i SpawnMonster()
+Procedure StepOnFloor(*Tile.TTile, *Monster.TMonster)
+  If *Monster\MonsterType = #Player And *Tile\HasTreasure
+    Score + 1 : *Tile\HasTreasure = #False : SpawnMonster()
+  EndIf
+EndProcedure
 Procedure.u GenerateTiles()
   NumPassableTiles.u = 0
   For i.w = 0 To NumTiles - 1
@@ -59,9 +65,9 @@ Procedure.u GenerateTiles()
         Tiles(i, j)\TileType = #Wall : Tiles(i, j)\StepOn = #Null
       Else
         Tiles(i, j)\x = i : Tiles(i, j)\y = j : Tiles(i, j)\Sprite = #SpriteFloor : Tiles(i, j)\Passable = #True
-        Tiles(i, j)\TileType = #Floor : Tiles(i, j)\StepOn = #Null : NumPassableTiles + 1
+        Tiles(i, j)\TileType = #Floor : Tiles(i, j)\StepOn = @StepOnFloor() : NumPassableTiles + 1
       EndIf
-      Tiles(i, j)\Monster = #Null
+      Tiles(i, j)\Monster = #Null : Tiles(i, j)\HasTreasure = #False
     Next j
   Next i
   ProcedureReturn NumPassableTiles
@@ -140,6 +146,9 @@ Declare GenerateMonsters()
 Procedure GenerateLevel()
   TryTo("generate map", @GenerateMap())
   GenerateMonsters()
+  For i.a = 1 To 3
+    *Tile.TTile = RandomPassableTile() : *Tile\HasTreasure = #True
+  Next
 EndProcedure
 Declare InitMonster(*Monster.TMonster, *Tile.TTile, Sprite.u, Hp.b, MonsterType.a,
     DoStuff.DoStuffProc, UpdateMonster.UpdateMonsterProc, TeleportCounter.b)
@@ -317,6 +326,7 @@ Procedure.a TryPlayerMonsterMove(*Player.TMonster, Dx.w, Dy.w)
 EndProcedure
 Procedure DrawTile(*Tile.TTile)
   DrawSprite(*Tile\Sprite, *Tile\x, *Tile\y)
+  If *Tile\HasTreasure : DrawSprite(#SpriteTreasure, *Tile\x, *Tile\y) : EndIf
 EndProcedure
 Procedure PlaySoundEffect(Sound.a)
   If SoundInitiated And Not SoundMuted
@@ -333,7 +343,7 @@ Procedure StartGame()
     BindEvent(#PB_Event_RenderFrame, @RenderFrame())
     FlipBuffers()
   CompilerEndIf
-  Level = 1 : StartLevel(StartingHp) : GameState = "running"
+  Level = 1 : Score = 0 : StartLevel(StartingHp) : GameState = "running"
 EndProcedure
 Procedure UpdateKeyBoard(Elapsed.f)
   ReleasedW = KeyboardReleased(#PB_Key_W) : ReleasedS = KeyboardReleased(#PB_Key_S) : ReleasedA = KeyboardReleased(#PB_Key_A)
@@ -401,7 +411,9 @@ Procedure Draw()
       Next j
     Next i
     ForEach Monsters() : DrawMonster(@Monsters()) : Next
-    DrawMonster(@Player) : DrawBitmapText(GameWidth - UIWidth * TileSize + 25, 40, "Level: " + Str(Level))
+    DrawMonster(@Player)
+    DrawBitmapText(GameWidth - UIWidth * TileSize + 25, 40, "Level: " + Str(Level))
+    DrawBitmapText(GameWidth - UIWidth * TileSize + 25, 70, "Score: " + Str(Score))
   EndIf
 EndProcedure
 Procedure RenderFrame()
