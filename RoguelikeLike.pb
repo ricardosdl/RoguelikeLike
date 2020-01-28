@@ -9,7 +9,7 @@ Structure TMonster
   *Tile.TTile : Sprite.u : Hp.f : MonsterType.a : Dead.a : DoStuff.DoStuffProc : AttackedThisTurn.a
   Stunned.a : Update.UpdateMonsterProc : TeleportCounter.b
 EndStructure
-Enumeration GameResources : #SpriteSheet : #TitleBackground :  EndEnumeration
+Enumeration GameResources : #SpriteSheet : #TitleBackground : #Bitmap_Font_Sprite : EndEnumeration
 Enumeration GameSprites
   #SpritePlayer : #SpritePlayerDeath : #SpriteFloor : #SpriteWall : #SpriteBird : #SpriteSnake : #SpriteTank
   #SpriteEater : #SpriteJester : #SpriteHp : #SpriteTeleport : #SpriteExit
@@ -25,13 +25,27 @@ Global SpawnCounter.w, SpawnRate.w
 Procedure LoadSprites()
   LoadSprite(#SpriteSheet, BasePath + "graphics" + #PS$ + "spritesheet.png", #PB_Sprite_AlphaBlending)
   LoadSprite(#TitleBackground, BasePath + "graphics" + #PS$ + "title-background.png", #PB_Sprite_AlphaBlending)
+  LoadSprite(#Bitmap_Font_Sprite, BasePath + "graphics" + #PS$ + "font.png", #PB_Sprite_AlphaBlending)
 EndProcedure
 Procedure DrawSprite(SpriteIndex.u, x.f, y.f)
   ClipSprite(#SpriteSheet, SpriteIndex * 16, 0, 16, 16) : ZoomSprite(#SpriteSheet, TileSize, TileSize) : DisplayTransparentSprite(#SpriteSheet, x * TileSize, y * TileSize)
 EndProcedure
+Procedure DrawBitmapText(x.f, y.f, Text.s, CharWidthPx.a = 16, CharHeightPx.a = 24);draw text is too slow on linux, let's try to use bitmap fonts
+  ClipSprite(#Bitmap_Font_Sprite, #PB_Default, #PB_Default, #PB_Default, #PB_Default)
+  ZoomSprite(#Bitmap_Font_Sprite, #PB_Default, #PB_Default)
+  For i.i = 1 To Len(Text);loop the string Text char by char
+    AsciiValue.a = Asc(Mid(Text, i, 1))
+    ClipSprite(#Bitmap_Font_Sprite, (AsciiValue - 32) % 16 * 8, (AsciiValue - 32) / 16 * 12, 8, 12)
+    ZoomSprite(#Bitmap_Font_Sprite, CharWidthPx, CharHeightPx)
+    DisplayTransparentSprite(#Bitmap_Font_Sprite, x + (i - 1) * CharWidthPx, y)
+  Next
+EndProcedure
 Procedure ShowTitle()
   DisplayTransparentSprite(#TitleBackground, 0, 0)
-  GameState = "title"
+  GameState = "title" : TitleX.f = (GameWidth - Len("Roguelike") * 32) / 2 : TitleY.f = (GameHeight / 2 - 110)
+  DrawBitmapText(TitleX, TitleY, "Roguelike", 32, 48)
+  TitleX = (GameWidth - Len("Like") * 48) / 2 : TitleY = (GameHeight / 2 - 50)
+  DrawBitmapText(TitleX, TitleY, "Like", 48, 72)
 EndProcedure
 Procedure.a InBounds(x.w, y.w)
   ProcedureReturn Bool(x > 0 And y > 0 And x < NumTiles - 1 And y < NumTiles - 1)
@@ -321,18 +335,6 @@ Procedure StartGame()
   CompilerEndIf
   Level = 1 : StartLevel(StartingHp) : GameState = "running"
 EndProcedure
-Procedure DrawBitmapText(x.f, y.f, Text.s, CharWidthPx.a = 16, CharHeightPx.a = 24);draw text is too slow on linux, let's try to use bitmap fonts
-  ClipSprite(Bitmap_Font_Sprite, #PB_Default, #PB_Default, #PB_Default, #PB_Default)
-  ZoomSprite(Bitmap_Font_Sprite, #PB_Default, #PB_Default)
-  For i.i = 1 To Len(Text);loop the string Text char by char
-    AsciiValue.a = Asc(Mid(Text, i, 1))
-    ClipSprite(Bitmap_Font_Sprite, (AsciiValue - 32) % 16 * 8, (AsciiValue - 32) / 16 * 12, 8, 12)
-    ZoomSprite(Bitmap_Font_Sprite, CharWidthPx, CharHeightPx)
-    DisplayTransparentSprite(Bitmap_Font_Sprite, x + (i - 1) * CharWidthPx, y)
-  Next
-EndProcedure
-Procedure DrawHUD()
-EndProcedure
 Procedure UpdateKeyBoard(Elapsed.f)
   ReleasedW = KeyboardReleased(#PB_Key_W) : ReleasedS = KeyboardReleased(#PB_Key_S) : ReleasedA = KeyboardReleased(#PB_Key_A)
   ReleasedD = KeyboardReleased(#PB_Key_D)
@@ -399,7 +401,7 @@ Procedure Draw()
       Next j
     Next i
     ForEach Monsters() : DrawMonster(@Monsters()) : Next
-    DrawMonster(@Player) : DrawHUD()
+    DrawMonster(@Player) : DrawBitmapText(GameWidth - UIWidth * TileSize + 25, 40, "Level: " + Str(Level))
   EndIf
 EndProcedure
 Procedure RenderFrame()
