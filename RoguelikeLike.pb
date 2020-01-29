@@ -401,10 +401,8 @@ Procedure StartGame()
 EndProcedure
 Procedure UpdateKeyBoard(Elapsed.f)
   If (GameState = "title" Or GameState = "dead") And KeyboardReleased(#PB_Key_All)
-    If GameState = "title"
-      StartGame()
-    ElseIf GameState = "dead"
-      ShowTitle()
+    If GameState = "title" : StartGame()
+    ElseIf GameState = "dead" : ShowTitle()
     EndIf
   EndIf
   If GameState = "running"
