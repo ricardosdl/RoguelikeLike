@@ -7,7 +7,7 @@ Enumeration MonsterTypes : #Player : #Bird : #Snake : #Tank : #Eater : #Jester :
 Prototype DoStuffProc(*Monster) : Prototype UpdateMonsterProc(*Monster)
 Structure TMonster
   *Tile.TTile : Sprite.u : Hp.f : MonsterType.a : Dead.a : DoStuff.DoStuffProc : AttackedThisTurn.a
-  Stunned.a : Update.UpdateMonsterProc : TeleportCounter.b
+  Stunned.a : Update.UpdateMonsterProc : TeleportCounter.b : OffsetX.f : OffsetY.f
 EndStructure
 Enumeration GameResources : #SpriteSheet : #TitleBackground : #Bitmap_Font_Sprite : EndEnumeration
 Enumeration GameSprites
@@ -232,7 +232,10 @@ Procedure ReplaceTile(NewTileType.a, x.w, y.w)
   EndIf
 EndProcedure
 Procedure MoveMonster(*Monster.TMonster, *NewTile.TTile)
-  If *Monster\Tile <> #Null : *Monster\Tile\Monster = #Null : EndIf
+  If *Monster\Tile <> #Null
+    *Monster\Tile\Monster = #Null
+    *Monster\OffsetX = *Monster\Tile\x - *NewTile\x : *Monster\OffsetY = *Monster\Tile\y - *NewTile\y
+  EndIf
   *Monster\Tile = *NewTile : *NewTile\Monster = *Monster
   If *NewTile\StepOn <> #Null
     *NewTile\StepOn(*NewTile, *Monster)
@@ -242,8 +245,8 @@ Procedure InitMonster(*Monster.TMonster, *Tile.TTile, Sprite.u, Hp.b, MonsterTyp
     DoStuff.DoStuffProc, UpdateMonster.UpdateMonsterProc, TeleportCounter.b)
   *Monster\Sprite = Sprite : *Monster\Hp = Hp : *Monster\MonsterType = MonsterType
   *Monster\Dead = #False : *Monster\DoStuff = DoStuff : *Monster\AttackedThisTurn = #False : *Monster\Stunned = #False
-  *Monster\Update = UpdateMonster : *Monster\TeleportCounter = TeleportCounter
-  MoveMonster(*Monster, *Tile)
+  *Monster\Update = UpdateMonster : *Monster\TeleportCounter = TeleportCounter : *Monster\OffsetX = 0.0 : *Monster\OffsetY = 0.0
+  *Monster\Tile = #Null :  MoveMonster(*Monster, *Tile)
 EndProcedure
 Declare.a GetTileDistance(*TileA.TTile, *TileB.TTile) : Declare.a TryMonsterMove(*Monster.TMonster, Dx.w, Dy.w)
 Procedure DoMonsterStuff(*Monster.TMonster)
@@ -435,16 +438,23 @@ SoundInitiated = InitSound()
 CompilerIf #PB_Compiler_Processor = #PB_Processor_JavaScript
   BindEvent(#PB_Event_Loading, @Loading()) : BindEvent(#PB_Event_LoadingError, @LoadingError())
 CompilerEndIf
+Procedure.f GetMonsterDisplayXY(*Monster.TMonster, IsItX.a)
+  If IsItX : ProcedureReturn *Monster\Tile\x + *Monster\OffsetX
+    Else : ProcedureReturn *Monster\Tile\y + *Monster\OffsetY
+  EndIf
+EndProcedure
 Procedure DrawMonster(*Monster.TMonster)
   If *Monster\TeleportCounter > 0
-    DrawSprite(#SpriteTeleport, *Monster\Tile\x, *Monster\Tile\y)
+    DrawSprite(#SpriteTeleport, GetMonsterDisplayXY(*Monster, #True), GetMonsterDisplayXY(*Monster, #False))
   Else
-    DrawSprite(*Monster\Sprite, *Monster\Tile\x, *Monster\Tile\y)
+    DrawSprite(*Monster\Sprite, GetMonsterDisplayXY(*Monster, #True), GetMonsterDisplayXY(*Monster, #False))
     For i.b = 0 To *Monster\Hp - 1;draw hp
-      ii.b = (i % 3) : Hpx.f = *Monster\Tile\x + (ii) * (5 / 16)
-      DrawSprite(#SpriteHp, Hpx, *Monster\Tile\y - Round( i / 3, #PB_Round_Down) * (5 /16))
+      ii.b = (i % 3) : Hpx.f = GetMonsterDisplayXY(*Monster, #True) + (ii) * (5 / 16)
+      DrawSprite(#SpriteHp, Hpx, GetMonsterDisplayXY(*Monster, #False) - Round( i / 3, #PB_Round_Down) * (5 /16))
     Next
   EndIf
+  *Monster\OffsetX - Sign(*Monster\OffsetX) * (1 / 8) : *Monster\OffsetY - Sign(*Monster\OffsetY) * (1 / 8)
+  
 EndProcedure
 Procedure Draw()
   If GameState = "running" Or GameState = "dead"
