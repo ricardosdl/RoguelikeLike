@@ -9,7 +9,8 @@ Structure TMonster
   *Tile.TTile : Sprite.u : Hp.f : MonsterType.a : Dead.a : DoStuff.DoStuffProc : AttackedThisTurn.a
   Stunned.a : Update.UpdateMonsterProc : TeleportCounter.b : OffsetX.f : OffsetY.f
 EndStructure
-Enumeration GameResources : #SpriteSheet : #TitleBackground : #Bitmap_Font_Sprite : EndEnumeration
+Enumeration GameResources : #SpriteSheet : #TitleBackground : #Bitmap_Font_Sprite : #SoundHit1
+#SoundHit2 : #SoundTreasure : #SoundNewLevel : #SoundSpell : EndEnumeration
 Enumeration GameSprites
   #SpritePlayer : #SpritePlayerDeath : #SpriteFloor : #SpriteWall : #SpriteBird : #SpriteSnake : #SpriteTank
   #SpriteEater : #SpriteJester : #SpriteHp : #SpriteTeleport : #SpriteExit : #SpriteTreasure
@@ -20,11 +21,11 @@ EndStructure
 Prototype.a CallBackProc();our callback prototype
 Global PlayerX.w = 0, PlayerY.w = 0
 Global TileSize.a = 64, NumTiles.u = 9, UIWidth.u = 4, GameWidth.u = TileSize * (NumTiles + UIWidth), GameHeight.u = TileSize * NumTiles,ExitGame.a = #False, SoundMuted.a = #False
-Global BasePath.s = "data" + #PS$, ElapsedTimneInS.f, LastTimeInMs.q
+Global BasePath.s = "data" + #PS$, ElapsedTimneInS.f, LastTimeInMs.q, SoundInitiated.i = #False
 Global Dim Tiles.TTile(NumTiles - 1, NumTiles - 1), *RandomPassableTile.TTile
 Global Level.a, Player.TMonster, NewList Monsters.TMonster(), MaxHp.a = 6, GameState.s = "loading", StartingHp.a = 3, NumLevels.a = 6
 Global SpawnCounter.w, SpawnRate.w, Score.a, NewList Scores.TScore(), ShakeAmount.a = 0, ShakeX.f = 0.0, ShakeY.f = 0.0
-
+Declare PlaySoundEffect(Sound.a)
 Procedure GetScores(List ReturnedScores.TScore())
   ClearList(ReturnedScores()) : CopyList(Scores(), ReturnedScores())
 EndProcedure
@@ -101,7 +102,7 @@ EndProcedure
 Declare.i SpawnMonster()
 Procedure StepOnFloor(*Tile.TTile, *Monster.TMonster)
   If *Monster\MonsterType = #Player And *Tile\HasTreasure
-    Score + 1 : *Tile\HasTreasure = #False : SpawnMonster()
+    Score + 1 : PlaySoundEffect(#SoundTreasure) : *Tile\HasTreasure = #False : SpawnMonster()
   EndIf
 EndProcedure
 Procedure.u GenerateTiles()
@@ -213,6 +214,7 @@ Procedure StartLevel(StartingHp.a)
 EndProcedure
 Procedure StepOnExit(*Tile.TTile, *Monster.TMonster)
   If *Monster\MonsterType = #Player
+    PlaySoundEffect(#SoundNewLevel)
     If Level = NumLevels
       AddScore(Score, #True) : ShowTitle()
     Else
@@ -309,6 +311,7 @@ EndProcedure
 Procedure HitMonster(*Monster.TMonster, Damage.a)
   *Monster\hp - Damage
   If *Monster\hp <= 0 : DieMonster(*Monster) : EndIf
+  If *Monster\MonsterType = #Player : PlaySoundEffect(#SoundHit1) : Else : PlaySoundEffect(#SoundHit2) : EndIf
 EndProcedure
 Procedure.a TryMonsterMove(*Monster.TMonster, Dx.w, Dy.w)
   *NewTile.TTile = GetTileNeighbor(*Monster\Tile, Dx, Dy)
@@ -382,12 +385,15 @@ Procedure DrawTile(*Tile.TTile)
   If *Tile\HasTreasure : DrawSprite(#SpriteTreasure, *Tile\x, *Tile\y) : EndIf
 EndProcedure
 Procedure PlaySoundEffect(Sound.a)
-  If SoundInitiated And Not SoundMuted
+  If SoundInitiated
     PlaySound(Sound)
   EndIf
 EndProcedure
 Procedure LoadSounds()
-  If SoundInitiated
+  If SoundInitiated : SoundPath.s = BasePath + "sounds" + #PS$
+    LoadSound(#SoundHit1, SoundPath + "hit1.wav") : LoadSound(#SoundHit2, SoundPath + "hit2.wav")
+    LoadSound(#SoundTreasure, SoundPath + "treasure.wav") : LoadSound(#SoundNewLevel, SoundPath + "newLevel.wav")
+    LoadSound(#SoundSpell, SoundPath + "spell.wav")
   EndIf
 EndProcedure
 Declare RenderFrame()
@@ -501,8 +507,7 @@ Procedure RenderFrame()
 EndProcedure
 If OpenWindow(0, 0, 0, GameWidth, GameHeight, "RoguelikeLike", #PB_Window_SystemMenu | #PB_Window_ScreenCentered)
   If OpenWindowedScreen(WindowID(0), 0, 0, GameWidth, GameHeight, 0, 0, 0)
-    LoadSprites()
-    LoadSounds()
+    LoadSprites() : LoadSounds()
     CompilerIf #PB_Compiler_Processor <> #PB_Processor_JavaScript
       ShowTitle()
     CompilerEndIf
