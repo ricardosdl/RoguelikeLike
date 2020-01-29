@@ -495,8 +495,7 @@ Procedure RenderFrame()
       EndSelect
     Until Event = 0 ; Quit the event loop only when no more events are available
   CompilerEndIf  
-  ExamineKeyboard() : UpdateKeyBoard(ElapsedTimneInS)
-  Draw()
+  ExamineKeyboard() : UpdateKeyBoard(ElapsedTimneInS) : Draw()
   LastTimeInMs = ElapsedMilliseconds()
   FlipBuffers()
 EndProcedure
