@@ -169,10 +169,7 @@ Procedure GetTileAdjacentPassableNeighbors(*Tile.TTile, List AdjacentPassableNei
 EndProcedure
 Procedure GetTileConnectedTiles(*Tile.TTile, List ConnectedTiles.i())
   ClearList(ConnectedTiles()) : AddElement(ConnectedTiles()) : ConnectedTiles() = *Tile
-  NewList TilesToCheck.i() : 
-  AddElement(TilesToCheck()) : 
-  TilesToCheck() = *Tile : 
-  ResetList(TilesToCheck())
+  NewList TilesToCheck.i() : AddElement(TilesToCheck()) : TilesToCheck() = *Tile : ResetList(TilesToCheck())
   While(NextElement(TilesToCheck()))
     *CurrentTile.TTile = TilesToCheck() : FirstElement(TilesToCheck()) : DeleteElement(TilesToCheck())
     NewList PassableNeighbors.i() : GetTileAdjacentPassableNeighbors(*CurrentTile, PassableNeighbors())
