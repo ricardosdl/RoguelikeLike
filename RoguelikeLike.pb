@@ -23,7 +23,7 @@ Global TileSize.a = 64, NumTiles.u = 9, UIWidth.u = 4, GameWidth.u = TileSize * 
 Global BasePath.s = "data" + #PS$, ElapsedTimneInS.f, LastTimeInMs.q
 Global Dim Tiles.TTile(NumTiles - 1, NumTiles - 1), *RandomPassableTile.TTile
 Global Level.a, Player.TMonster, NewList Monsters.TMonster(), MaxHp.a = 6, GameState.s = "loading", StartingHp.a = 3, NumLevels.a = 6
-Global SpawnCounter.w, SpawnRate.w, Score.a, NewList Scores.TScore()
+Global SpawnCounter.w, SpawnRate.w, Score.a, NewList Scores.TScore(), ShakeAmount.a = 0, ShakeX.f = 0.0, ShakeY.f = 0.0
 
 Procedure GetScores(List ReturnedScores.TScore())
   ClearList(ReturnedScores()) : CopyList(Scores(), ReturnedScores())
@@ -50,7 +50,7 @@ Procedure LoadSprites()
   LoadSprite(#Bitmap_Font_Sprite, BasePath + "graphics" + #PS$ + "font.png", #PB_Sprite_AlphaBlending)
 EndProcedure
 Procedure DrawSprite(SpriteIndex.u, x.f, y.f)
-  ClipSprite(#SpriteSheet, SpriteIndex * 16, 0, 16, 16) : ZoomSprite(#SpriteSheet, TileSize, TileSize) : DisplayTransparentSprite(#SpriteSheet, x * TileSize, y * TileSize)
+  ClipSprite(#SpriteSheet, SpriteIndex * 16, 0, 16, 16) : ZoomSprite(#SpriteSheet, TileSize, TileSize) : DisplayTransparentSprite(#SpriteSheet, x * TileSize + ShakeX, y * TileSize + ShakeY)
 EndProcedure
 Procedure DrawBitmapText(x.f, y.f, Text.s, CharWidthPx.a = 16, CharHeightPx.a = 24);draw text is too slow on linux, let's try to use bitmap fonts
   ClipSprite(#Bitmap_Font_Sprite, #PB_Default, #PB_Default, #PB_Default, #PB_Default)
@@ -319,6 +319,7 @@ Procedure.a TryMonsterMove(*Monster.TMonster, Dx.w, Dy.w)
       If *Monster\MonsterType = #Player Or *NewTile\Monster\MonsterType = #Player
         *Monster\AttackedThisTurn = #True : *NewTile\Monster\Stunned = #True : HitMonster(*NewTile\Monster, 1)
         *Monster\OffsetX = (*NewTile\x - *Monster\Tile\x) / 2 : *Monster\OffsetY = (*NewTile\y - *Monster\Tile\y) / 2
+        ShakeAmount = 5
       EndIf
     EndIf
     ProcedureReturn #True
@@ -455,9 +456,15 @@ Procedure DrawMonster(*Monster.TMonster)
   *Monster\OffsetX - Sign(*Monster\OffsetX) * (1 / 8) : *Monster\OffsetY - Sign(*Monster\OffsetY) * (1 / 8)
   
 EndProcedure
+Procedure ScreenShake()
+  If ShakeAmount : ShakeAmount - 1 : EndIf : ShakeAngle = Random(999, 0) / 1000.0 * #PI * 2
+  ShakeX = Round(Cos(ShakeAngle) * ShakeAmount, #PB_Round_Nearest)
+  ShakeY = Round(Sin(ShakeAngle) * ShakeAmount, #PB_Round_Nearest)
+EndProcedure
 Procedure Draw()
   If GameState = "running" Or GameState = "dead"
     ClearScreen(RGB(0,0,0))
+    ScreenShake()
     For i.w = 0 To NumTiles - 1
       For j.w = 0 To NumTiles - 1
         *Tile.TTile = GetTile(i, j)
