@@ -317,7 +317,8 @@ Procedure.a TryMonsterMove(*Monster.TMonster, Dx.w, Dy.w)
       MoveMonster(*Monster, *NewTile)
     Else
       If *Monster\MonsterType = #Player Or *NewTile\Monster\MonsterType = #Player
-         *Monster\AttackedThisTurn = #True : *NewTile\Monster\Stunned = #True : HitMonster(*NewTile\Monster, 1)
+        *Monster\AttackedThisTurn = #True : *NewTile\Monster\Stunned = #True : HitMonster(*NewTile\Monster, 1)
+        *Monster\OffsetX = (*NewTile\x - *Monster\Tile\x) / 2 : *Monster\OffsetY = (*NewTile\y - *Monster\Tile\y) / 2
       EndIf
     EndIf
     ProcedureReturn #True
