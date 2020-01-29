@@ -397,9 +397,7 @@ Procedure StartGame()
   Level = 1 : Score = 0 : StartLevel(StartingHp) : GameState = "running"
 EndProcedure
 Procedure UpdateKeyBoard(Elapsed.f)
-  ReleasedW = KeyboardReleased(#PB_Key_W) : ReleasedS = KeyboardReleased(#PB_Key_S) : ReleasedA = KeyboardReleased(#PB_Key_A)
-  ReleasedD = KeyboardReleased(#PB_Key_D)
-  If KeyboardReleased(#PB_Key_All) Or (ReleasedW Or ReleasedS Or ReleasedA Or ReleasedD)
+  If (GameState = "title" Or GameState = "dead") And KeyboardReleased(#PB_Key_All)
     If GameState = "title"
       StartGame()
     ElseIf GameState = "dead"
@@ -407,10 +405,10 @@ Procedure UpdateKeyBoard(Elapsed.f)
     EndIf
   EndIf
   If GameState = "running"
-    If ReleasedW : TryPlayerMonsterMove(@Player, 0, -1) : EndIf
-    If ReleasedS : TryPlayerMonsterMove(@Player, 0, 1) : EndIf
-    If ReleasedA : TryPlayerMonsterMove(@Player, -1, 0) : EndIf
-    If ReleasedD : TryPlayerMonsterMove(@Player, 1, 0) : EndIf
+    If KeyboardReleased(#PB_Key_W) : TryPlayerMonsterMove(@Player, 0, -1) : EndIf
+    If KeyboardReleased(#PB_Key_S) : TryPlayerMonsterMove(@Player, 0, 1) : EndIf
+    If KeyboardReleased(#PB_Key_A) : TryPlayerMonsterMove(@Player, -1, 0) : EndIf
+    If KeyboardReleased(#PB_Key_D) : TryPlayerMonsterMove(@Player, 1, 0) : EndIf
   EndIf
 EndProcedure
 If InitSprite() = 0 Or InitKeyboard() = 0
