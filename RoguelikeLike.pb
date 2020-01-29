@@ -25,7 +25,11 @@ Global BasePath.s = "data" + #PS$, ElapsedTimneInS.f, LastTimeInMs.q, SoundIniti
 Global Dim Tiles.TTile(NumTiles - 1, NumTiles - 1), *RandomPassableTile.TTile
 Global Level.a, Player.TMonster, NewList Monsters.TMonster(), MaxHp.a = 6, GameState.s = "loading", StartingHp.a = 3, NumLevels.a = 6
 Global SpawnCounter.w, SpawnRate.w, Score.a, NewList Scores.TScore(), ShakeAmount.a = 0, ShakeX.f = 0.0, ShakeY.f = 0.0
-Declare PlaySoundEffect(Sound.a)
+Declare PlaySoundEffect(Sound.a) : Declare.i SpawnMonster() : Declare GenerateMonsters() : Declare ReplaceTile(NewTileType.a, x.w, y.w)
+Declare InitMonster(*Monster.TMonster, *Tile.TTile, Sprite.u, Hp.b, MonsterType.a,
+                            DoStuff.DoStuffProc, UpdateMonster.UpdateMonsterProc, TeleportCounter.b)
+Declare.a GetTileDistance(*TileA.TTile, *TileB.TTile) : Declare.a TryMonsterMove(*Monster.TMonster, Dx.w, Dy.w) : Declare RenderFrame()
+Declare UpdateMonster(*Monster.TMonster) : Declare DoEaterSuff(*Eater.TMonster) : Declare DoJesterStuff(*Jester.TMonster)
 Procedure GetScores(List ReturnedScores.TScore())
   ClearList(ReturnedScores()) : CopyList(Scores(), ReturnedScores())
 EndProcedure
@@ -99,7 +103,6 @@ EndProcedure
 Procedure.a InBounds(x.w, y.w)
   ProcedureReturn Bool(x > 0 And y > 0 And x < NumTiles - 1 And y < NumTiles - 1)
 EndProcedure
-Declare.i SpawnMonster()
 Procedure StepOnFloor(*Tile.TTile, *Monster.TMonster)
   If *Monster\MonsterType = #Player And *Tile\HasTreasure
     Score + 1 : PlaySoundEffect(#SoundTreasure) : *Tile\HasTreasure = #False : SpawnMonster()
@@ -191,7 +194,6 @@ Procedure GenerateMap()
   GetTileConnectedTiles(*RandomPassableTile, ConnectedTiles())
   ProcedureReturn Bool(PassableTiles = ListSize(ConnectedTiles()))
 EndProcedure
-Declare GenerateMonsters()
 Procedure GenerateLevel()
   TryTo("generate map", @GenerateMap())
   GenerateMonsters()
@@ -199,12 +201,9 @@ Procedure GenerateLevel()
     *Tile.TTile = RandomPassableTile() : *Tile\HasTreasure = #True
   Next
 EndProcedure
-Declare InitMonster(*Monster.TMonster, *Tile.TTile, Sprite.u, Hp.b, MonsterType.a,
-    DoStuff.DoStuffProc, UpdateMonster.UpdateMonsterProc, TeleportCounter.b)
 Procedure InitPlayer(*Player.TMonster, *Tile.TTile, Sprite.u, Hp.b)
   InitMonster(*Player, *Tile, Sprite, Hp, #Player, #Null, #Null, 0)
 EndProcedure
-Declare ReplaceTile(NewTileType.a, x.w, y.w)
 Procedure StartLevel(StartingHp.a)
   SpawnRate = 15 : SpawnCounter = SpawnRate : GenerateLevel()
   *RandomPassableTile.TTile = RandomPassableTile()
@@ -244,13 +243,12 @@ Procedure MoveMonster(*Monster.TMonster, *NewTile.TTile)
   EndIf
 EndProcedure
 Procedure InitMonster(*Monster.TMonster, *Tile.TTile, Sprite.u, Hp.b, MonsterType.a,
-    DoStuff.DoStuffProc, UpdateMonster.UpdateMonsterProc, TeleportCounter.b)
+    DoStuff.DoStuffProc, UpdateMonsterProc.UpdateMonsterProc, TeleportCounter.b)
   *Monster\Sprite = Sprite : *Monster\Hp = Hp : *Monster\MonsterType = MonsterType
   *Monster\Dead = #False : *Monster\DoStuff = DoStuff : *Monster\AttackedThisTurn = #False : *Monster\Stunned = #False
-  *Monster\Update = UpdateMonster : *Monster\TeleportCounter = TeleportCounter : *Monster\OffsetX = 0.0 : *Monster\OffsetY = 0.0
+  *Monster\Update = UpdateMonsterProc : *Monster\TeleportCounter = TeleportCounter : *Monster\OffsetX = 0.0 : *Monster\OffsetY = 0.0
   *Monster\Tile = #Null :  MoveMonster(*Monster, *Tile)
 EndProcedure
-Declare.a GetTileDistance(*TileA.TTile, *TileB.TTile) : Declare.a TryMonsterMove(*Monster.TMonster, Dx.w, Dy.w)
 Procedure DoMonsterStuff(*Monster.TMonster)
   NewList AdjacentPassableNeighbors.i()
   GetTileAdjacentPassableNeighbors(*Monster\Tile, AdjacentPassableNeighbors())
@@ -277,12 +275,10 @@ Procedure DoSnakeStuff(*Snake.TMonster)
   *Snake\AttackedThisTurn = #False : DoMonsterStuff(*Snake)
   If Not *Snake\AttackedThisTurn : DoMonsterStuff(*Snake) : EndIf
 EndProcedure
-Declare UpdateMonster(*Monster.TMonster)
 Procedure UpdateTankMonster(*Monster.TMonster)
   StartStunned.a = *Monster\Stunned : UpdateMonster(*Monster)
   If Not StartStunned : *Monster\Stunned = #True : EndIf
 EndProcedure
-Declare DoEaterSuff(*Eater.TMonster) : Declare DoJesterStuff(*Jester.TMonster)
 Procedure.i InitAMonster(*Tile.TTile, MonsterType.a)
   AddElement(Monsters())
   Select MonsterType
@@ -396,7 +392,6 @@ Procedure LoadSounds()
     LoadSound(#SoundSpell, SoundPath + "spell.wav")
   EndIf
 EndProcedure
-Declare RenderFrame()
 Procedure StartGame()
   CompilerIf #PB_Compiler_Processor = #PB_Processor_JavaScript
     BindEvent(#PB_Event_RenderFrame, @RenderFrame())
