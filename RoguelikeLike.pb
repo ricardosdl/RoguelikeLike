@@ -4,11 +4,12 @@ Structure TTile
   x.w : y.w : Sprite.u : Passable.a : TileType.a : *Monster.TMonster : StepOn.StepOnTileProc : HasTreasure.a
 EndStructure
 Enumeration MonsterTypes : #Player : #Bird : #Snake : #Tank : #Eater : #Jester : EndEnumeration
-Prototype DoStuffProc(*Monster) : Prototype UpdateMonsterProc(*Monster)
+Prototype DoStuffProc(*Monster) : Prototype UpdateMonsterProc(*Monster) : Prototype SpellProc(*Caster)
 Structure TMonster
   *Tile.TTile : Sprite.u : Hp.f : MonsterType.a : Dead.a : DoStuff.DoStuffProc : AttackedThisTurn.a
-  Stunned.a : Update.UpdateMonsterProc : TeleportCounter.b : OffsetX.f : OffsetY.f
+  Stunned.a : Update.UpdateMonsterProc : TeleportCounter.b : OffsetX.f : OffsetY.f : List Spells.i()
 EndStructure
+Enumeration SpellTypes : #SpellWoop : EndEnumeration
 Enumeration GameResources : #SpriteSheet : #TitleBackground : #Bitmap_Font_Sprite : #SoundHit1
 #SoundHit2 : #SoundTreasure : #SoundNewLevel : #SoundSpell : EndEnumeration
 Enumeration GameSprites
@@ -19,10 +20,10 @@ Structure TScore
   Score.u : Run.u : TotalScore.l : Active.a
 EndStructure
 Prototype.a CallBackProc();our callback prototype
-Global PlayerX.w = 0, PlayerY.w = 0
+Global NumPlayerSpells.a
 Global TileSize.a = 64, NumTiles.u = 9, UIWidth.u = 4, GameWidth.u = TileSize * (NumTiles + UIWidth), GameHeight.u = TileSize * NumTiles,ExitGame.a = #False, SoundMuted.a = #False
 Global BasePath.s = "data" + #PS$, ElapsedTimneInS.f, LastTimeInMs.q, SoundInitiated.i = #False
-Global Dim Tiles.TTile(NumTiles - 1, NumTiles - 1), *RandomPassableTile.TTile
+Global Dim Tiles.TTile(NumTiles - 1, NumTiles - 1), *RandomPassableTile.TTile, MaxSpells.a = 15, Dim Spells.i(MaxSpells - 1)
 Global Level.a, Player.TMonster, NewList Monsters.TMonster(), MaxHp.a = 6, GameState.s = "loading", StartingHp.a = 3, NumLevels.a = 6
 Global SpawnCounter.w, SpawnRate.w, Score.a, NewList Scores.TScore(), ShakeAmount.a = 0, ShakeX.f = 0.0, ShakeY.f = 0.0
 Declare PlaySoundEffect(Sound.a) : Declare.i SpawnMonster() : Declare GenerateMonsters() : Declare ReplaceTile(NewTileType.a, x.w, y.w)
@@ -200,6 +201,12 @@ Procedure GenerateLevel()
 EndProcedure
 Procedure InitPlayer(*Player.TMonster, *Tile.TTile, Sprite.u, Hp.b)
   InitMonster(*Player, *Tile, Sprite, Hp, #Player, #Null, #Null, 0)
+  For i.a = 1 To NumPlayerSpells;initializing the player's spells list
+    AddElement(*Player\Spells()) : *Player\Spells() = Spells(Random(MaxSpells - 1, 0))
+  Next
+EndProcedure
+Procedure AddMonsterSpell(*Monster.TMonster)
+  AddElement(*Monster\Spells()) : *Monster\Spells() = Spells(Random(MaxSpells - 1, 0))
 EndProcedure
 Procedure StartLevel(StartingHp.a)
   SpawnRate = 15 : SpawnCounter = SpawnRate : GenerateLevel()
@@ -373,6 +380,18 @@ EndProcedure
 Procedure.a TryPlayerMonsterMove(*Player.TMonster, Dx.w, Dy.w)
   If TryMonsterMove(Player, Dx, Dy) : Tick() : EndIf
 EndProcedure
+Procedure WoopSpell(*Caster.TMonster)
+  MoveMonster(*Caster, RandomPassableTile())
+EndProcedure
+Procedure InitSpells()
+  Spells(#SpellWoop) = @WoopSpell()
+EndProcedure
+Procedure CastMonsterSpell(*Monster.TMonster, Index.a);call this procedure to cast a spell
+  If SelectElement(*Monster\Spells(), Index)
+    SpellProcedure.SpellProc = Spells(*Monster\Spells()) : SpellProcedure(*Monster)
+    DeleteElement(*Monster\Spells(), #True) : PlaySoundEffect(#SoundSpell) : Tick()
+  EndIf
+EndProcedure
 Procedure DrawTile(*Tile.TTile)
   DrawSprite(*Tile\Sprite, *Tile\x, *Tile\y)
   If *Tile\HasTreasure : DrawSprite(#SpriteTreasure, *Tile\x, *Tile\y) : EndIf
@@ -394,7 +413,7 @@ Procedure StartGame()
     BindEvent(#PB_Event_RenderFrame, @RenderFrame())
     FlipBuffers()
   CompilerEndIf
-  Level = 1 : Score = 0 : StartLevel(StartingHp) : GameState = "running"
+  Level = 1 : Score = 0 : NumPlayerSpells = 1 : StartLevel(StartingHp) : GameState = "running"
 EndProcedure
 Procedure UpdateKeyBoard(Elapsed.f)
   If (GameState = "title" Or GameState = "dead") And KeyboardReleased(#PB_Key_All)
@@ -407,6 +426,18 @@ Procedure UpdateKeyBoard(Elapsed.f)
     If KeyboardReleased(#PB_Key_S) : TryPlayerMonsterMove(@Player, 0, 1) : EndIf
     If KeyboardReleased(#PB_Key_A) : TryPlayerMonsterMove(@Player, -1, 0) : EndIf
     If KeyboardReleased(#PB_Key_D) : TryPlayerMonsterMove(@Player, 1, 0) : EndIf
+    
+    If KeyboardReleased(#PB_Key_1) : CastMonsterSpell(@Player, #PB_Key_1 - 2)  
+    ElseIf KeyboardReleased(#PB_Key_2) : CastMonsterSpell(@Player, #PB_Key_2 - 2)  
+    ElseIf KeyboardReleased(#PB_Key_3) : CastMonsterSpell(@Player, #PB_Key_3 - 2)  
+    ElseIf KeyboardReleased(#PB_Key_4) : CastMonsterSpell(@Player, #PB_Key_4 - 2)  
+    ElseIf KeyboardReleased(#PB_Key_5) : CastMonsterSpell(@Player, #PB_Key_5 - 2)  
+    ElseIf KeyboardReleased(#PB_Key_6) : CastMonsterSpell(@Player, #PB_Key_6 - 2)  
+    ElseIf KeyboardReleased(#PB_Key_7) : CastMonsterSpell(@Player, #PB_Key_7 - 2)  
+    ElseIf KeyboardReleased(#PB_Key_8) : CastMonsterSpell(@Player, #PB_Key_8 - 2)  
+    ElseIf KeyboardReleased(#PB_Key_9) : CastMonsterSpell(@Player, #PB_Key_9 - 2)
+    EndIf
+    
   EndIf
 EndProcedure
 If InitSprite() = 0 Or InitKeyboard() = 0
@@ -496,7 +527,7 @@ Procedure RenderFrame()
 EndProcedure
 If OpenWindow(0, 0, 0, GameWidth, GameHeight, "RoguelikeLike", #PB_Window_SystemMenu | #PB_Window_ScreenCentered)
   If OpenWindowedScreen(WindowID(0), 0, 0, GameWidth, GameHeight, 0, 0, 0)
-    LoadSprites() : LoadSounds()
+    LoadSprites() : LoadSounds() : InitSpells()
     CompilerIf #PB_Compiler_Processor <> #PB_Processor_JavaScript
       ShowTitle()
     CompilerEndIf
