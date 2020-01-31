@@ -7,7 +7,7 @@ Enumeration MonsterTypes : #Player : #Bird : #Snake : #Tank : #Eater : #Jester :
 Prototype DoStuffProc(*Monster) : Prototype UpdateMonsterProc(*Monster) : Prototype SpellProc(*Caster)
 Structure TMonster
   *Tile.TTile : Sprite.u : Hp.f : MonsterType.a : Dead.a : DoStuff.DoStuffProc : AttackedThisTurn.a
-  Stunned.a : Update.UpdateMonsterProc : TeleportCounter.b : OffsetX.f : OffsetY.f : List Spells.i()
+  Stunned.a : Update.UpdateMonsterProc : TeleportCounter.b : OffsetX.f : OffsetY.f : List Spells.a()
 EndStructure
 Enumeration SpellTypes : #SpellWoop : EndEnumeration
 Enumeration GameResources : #SpriteSheet : #TitleBackground : #Bitmap_Font_Sprite : #SoundHit1
@@ -21,9 +21,9 @@ Structure TScore
 EndStructure
 Prototype.a CallBackProc();our callback prototype
 Global NumPlayerSpells.a
-Global TileSize.a = 64, NumTiles.u = 9, UIWidth.u = 4, GameWidth.u = TileSize * (NumTiles + UIWidth), GameHeight.u = TileSize * NumTiles,ExitGame.a = #False, SoundMuted.a = #False
+Global TileSize.a = 64, NumTiles.a = 9, UIWidth.u = 4, GameWidth.u = TileSize * (NumTiles + UIWidth), GameHeight.u = TileSize * NumTiles,ExitGame.a = #False, SoundMuted.a = #False
 Global BasePath.s = "data" + #PS$, ElapsedTimneInS.f, LastTimeInMs.q, SoundInitiated.i = #False
-Global Dim Tiles.TTile(NumTiles - 1, NumTiles - 1), *RandomPassableTile.TTile, MaxSpells.a = 15, Dim Spells.i(MaxSpells - 1)
+Global Dim Tiles.TTile(NumTiles - 1, NumTiles - 1), *RandomPassableTile.TTile, MaxSpells.a = 15, Dim Spells.i(MaxSpells - 1), NewMap SpellNames.s()
 Global Level.a, Player.TMonster, NewList Monsters.TMonster(), MaxHp.a = 6, GameState.s = "loading", StartingHp.a = 3, NumLevels.a = 6
 Global SpawnCounter.w, SpawnRate.w, Score.a, NewList Scores.TScore(), ShakeAmount.a = 0, ShakeX.f = 0.0, ShakeY.f = 0.0
 Declare PlaySoundEffect(Sound.a) : Declare.i SpawnMonster() : Declare GenerateMonsters() : Declare ReplaceTile(NewTileType.a, x.w, y.w)
@@ -111,8 +111,8 @@ Procedure StepOnFloor(*Tile.TTile, *Monster.TMonster)
 EndProcedure
 Procedure.u GenerateTiles()
   NumPassableTiles.u = 0
-  For i.w = 0 To NumTiles - 1
-    For j.w = 0 To NumTiles - 1
+  For i.a = 0 To NumTiles - 1
+    For j.a = 0 To NumTiles - 1
       If (Random(100, 0) / 100.0 < 0.3) Or (Not InBounds(i, j))
         Tiles(i, j)\x = i : Tiles(i, j)\y = j : Tiles(i, j)\Sprite = #SpriteWall : Tiles(i, j)\Passable = #False
         Tiles(i, j)\TileType = #Wall : Tiles(i, j)\StepOn = #Null
@@ -202,11 +202,11 @@ EndProcedure
 Procedure InitPlayer(*Player.TMonster, *Tile.TTile, Sprite.u, Hp.b)
   InitMonster(*Player, *Tile, Sprite, Hp, #Player, #Null, #Null, 0)
   For i.a = 1 To NumPlayerSpells;initializing the player's spells list
-    AddElement(*Player\Spells()) : *Player\Spells() = Spells(Random(MaxSpells - 1, 0))
+    AddElement(*Player\Spells()) : *Player\Spells() = Random(#SpellWoop, #SpellWoop)
   Next
 EndProcedure
 Procedure AddMonsterSpell(*Monster.TMonster)
-  AddElement(*Monster\Spells()) : *Monster\Spells() = Spells(Random(MaxSpells - 1, 0))
+  AddElement(*Monster\Spells()) : *Monster\Spells() = Random(#SpellWoop, #SpellWoop)
 EndProcedure
 Procedure StartLevel(StartingHp.a)
   SpawnRate = 15 : SpawnCounter = SpawnRate : GenerateLevel()
@@ -251,7 +251,7 @@ Procedure InitMonster(*Monster.TMonster, *Tile.TTile, Sprite.u, Hp.b, MonsterTyp
   *Monster\Sprite = Sprite : *Monster\Hp = Hp : *Monster\MonsterType = MonsterType
   *Monster\Dead = #False : *Monster\DoStuff = DoStuff : *Monster\AttackedThisTurn = #False : *Monster\Stunned = #False
   *Monster\Update = UpdateMonsterProc : *Monster\TeleportCounter = TeleportCounter : *Monster\OffsetX = 0.0 : *Monster\OffsetY = 0.0
-  *Monster\Tile = #Null :  MoveMonster(*Monster, *Tile)
+  *Monster\Tile = #Null : ClearList(*Monster\Spells()) :  MoveMonster(*Monster, *Tile)
 EndProcedure
 Procedure DoMonsterStuff(*Monster.TMonster)
   NewList AdjacentPassableNeighbors.i()
@@ -384,7 +384,7 @@ Procedure WoopSpell(*Caster.TMonster)
   MoveMonster(*Caster, RandomPassableTile())
 EndProcedure
 Procedure InitSpells()
-  Spells(#SpellWoop) = @WoopSpell()
+  Spells(#SpellWoop) = @WoopSpell() : SpellNames(Str(#SpellWoop)) = "WOOP"
 EndProcedure
 Procedure CastMonsterSpell(*Monster.TMonster, Index.a);call this procedure to cast a spell
   If SelectElement(*Monster\Spells(), Index)
@@ -492,8 +492,8 @@ Procedure Draw()
   If GameState = "running" Or GameState = "dead"
     ClearScreen(RGB(0,0,0))
     ScreenShake()
-    For i.w = 0 To NumTiles - 1
-      For j.w = 0 To NumTiles - 1
+    For i.b = 0 To NumTiles - 1
+      For j.b = 0 To NumTiles - 1
         *Tile.TTile = GetTile(i, j)
         If *Tile = #Null : Continue;the tile is out of the visible screen
         Else
@@ -505,6 +505,11 @@ Procedure Draw()
     DrawMonster(@Player)
     DrawBitmapText(GameWidth - UIWidth * TileSize + 25, 40, "Level: " + Str(Level))
     DrawBitmapText(GameWidth - UIWidth * TileSize + 25, 70, "Score: " + Str(Score))
+    For i = 0 To NumPlayerSpells - 1 : SpellName.s = ""
+      If SelectElement(Player\Spells(), i) : SpellName = SpellNames(Str(Player\Spells())) : EndIf
+      SpellText.s = Str(i + 1) + ")" + SpellName
+      DrawBitmapText(GameWidth - UIWidth * TileSize + 25, 110 + i * 40, SpellText)
+    Next
   EndIf
 EndProcedure
 Procedure RenderFrame()
