@@ -30,7 +30,7 @@ Declare PlaySoundEffect(Sound.a) : Declare.i SpawnMonster() : Declare GenerateMo
 Declare InitMonster(*Monster.TMonster, *Tile.TTile, Sprite.u, Hp.b, MonsterType.a,
                             DoStuff.DoStuffProc, UpdateMonster.UpdateMonsterProc, TeleportCounter.b)
 Declare.a GetTileDistance(*TileA.TTile, *TileB.TTile) : Declare.a TryMonsterMove(*Monster.TMonster, Dx.w, Dy.w) : Declare RenderFrame()
-Declare UpdateMonster(*Monster.TMonster) : Declare DoEaterSuff(*Eater.TMonster) : Declare DoJesterStuff(*Jester.TMonster)
+Declare UpdateMonster(*Monster.TMonster) : Declare DoEaterSuff(*Eater.TMonster) : Declare DoJesterStuff(*Jester.TMonster) : Declare AddMonsterSpell(*Monster.TMonster)
 Procedure GetScores(List ReturnedScores.TScore())
   ClearList(ReturnedScores()) : CopyList(Scores(), ReturnedScores())
 EndProcedure
@@ -106,7 +106,11 @@ Procedure.a InBounds(x.w, y.w)
 EndProcedure
 Procedure StepOnFloor(*Tile.TTile, *Monster.TMonster)
   If *Monster\MonsterType = #Player And *Tile\HasTreasure
-    Score + 1 : PlaySoundEffect(#SoundTreasure) : *Tile\HasTreasure = #False : SpawnMonster()
+    Score + 1
+    If (Score % 3) = 0 And NumPlayerSpells < 9
+      NumPlayerSpells + 1 : AddMonsterSpell(@Player)
+    EndIf
+    PlaySoundEffect(#SoundTreasure) : *Tile\HasTreasure = #False : SpawnMonster()
   EndIf
 EndProcedure
 Procedure.u GenerateTiles()
