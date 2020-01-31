@@ -9,7 +9,7 @@ Structure TMonster
   *Tile.TTile : Sprite.u : Hp.f : MonsterType.a : Dead.a : DoStuff.DoStuffProc : AttackedThisTurn.a
   Stunned.a : Update.UpdateMonsterProc : TeleportCounter.b : OffsetX.f : OffsetY.f : List Spells.a()
 EndStructure
-Enumeration SpellTypes : #SpellWoop : EndEnumeration
+Enumeration SpellTypes : #SpellWoop : #SpellQuake : EndEnumeration
 Enumeration GameResources : #SpriteSheet : #TitleBackground : #Bitmap_Font_Sprite : #SoundHit1
 #SoundHit2 : #SoundTreasure : #SoundNewLevel : #SoundSpell : EndEnumeration
 Enumeration GameSprites
@@ -203,14 +203,15 @@ Procedure GenerateLevel()
     *Tile.TTile = RandomPassableTile() : *Tile\HasTreasure = #True
   Next
 EndProcedure
+Procedure.a GetRandomSpell() : ProcedureReturn Random(#SpellQuake, #SpellWoop) : EndProcedure
 Procedure InitPlayer(*Player.TMonster, *Tile.TTile, Sprite.u, Hp.b)
   InitMonster(*Player, *Tile, Sprite, Hp, #Player, #Null, #Null, 0)
   For i.a = 1 To NumPlayerSpells;initializing the player's spells list
-    AddElement(*Player\Spells()) : *Player\Spells() = Random(#SpellWoop, #SpellWoop)
+    AddElement(*Player\Spells()) : *Player\Spells() = GetRandomSpell()
   Next
 EndProcedure
 Procedure AddMonsterSpell(*Monster.TMonster)
-  AddElement(*Monster\Spells()) : *Monster\Spells() = Random(#SpellWoop, #SpellWoop)
+  AddElement(*Monster\Spells()) : *Monster\Spells() = GetRandomSpell()
 EndProcedure
 Procedure StartLevel(StartingHp.a)
   SpawnRate = 15 : SpawnCounter = SpawnRate : GenerateLevel()
@@ -387,8 +388,22 @@ EndProcedure
 Procedure WoopSpell(*Caster.TMonster)
   MoveMonster(*Caster, RandomPassableTile())
 EndProcedure
+Procedure QuakeSpell(*Caster.TMonster)
+  For i.a = 0 To NumTiles - 1
+    For j.a = 0 To NumTiles - 1
+      *Tile.TTile = GetTile(i, j)
+      If *Tile\Monster <> #Null : NewList AdjacentPassableNeighbors.i()
+        GetTileAdjacentPassableNeighbors(*Tile, AdjacentPassableNeighbors())
+        NumWalls.a = 4 - ListSize(AdjacentPassableNeighbors())
+        HitMonster(*Tile\Monster, NumWalls * 2)
+      EndIf
+    Next j
+  Next i
+  ShakeAmount = 20
+EndProcedure
 Procedure InitSpells()
   Spells(#SpellWoop) = @WoopSpell() : SpellNames(Str(#SpellWoop)) = "WOOP"
+  Spells(#SpellQuake) = @QuakeSpell() : SpellNames(Str(#SpellQuake)) = "QUAKE"
 EndProcedure
 Procedure CastMonsterSpell(*Monster.TMonster, Index.a);call this procedure to cast a spell
   If SelectElement(*Monster\Spells(), Index)
@@ -417,7 +432,7 @@ Procedure StartGame()
     BindEvent(#PB_Event_RenderFrame, @RenderFrame())
     FlipBuffers()
   CompilerEndIf
-  Level = 1 : Score = 0 : NumPlayerSpells = 1 : StartLevel(StartingHp) : GameState = "running"
+  Level = 1 : Score = 0 : NumPlayerSpells = 9 : StartLevel(StartingHp) : GameState = "running"
 EndProcedure
 Procedure UpdateKeyBoard(Elapsed.f)
   If (GameState = "title" Or GameState = "dead") And KeyboardReleased(#PB_Key_All)
