@@ -9,7 +9,7 @@ Structure TMonster
   *Tile.TTile : Sprite.u : Hp.f : MonsterType.a : Dead.a : DoStuff.DoStuffProc : AttackedThisTurn.a
   Stunned.a : Update.UpdateMonsterProc : TeleportCounter.b : OffsetX.f : OffsetY.f : List Spells.a()
 EndStructure
-Enumeration SpellTypes : #SpellWoop : #SpellQuake : EndEnumeration
+Enumeration SpellTypes : #SpellWoop : #SpellQuake : #SpellMaelstrom : EndEnumeration
 Enumeration GameResources : #SpriteSheet : #TitleBackground : #Bitmap_Font_Sprite : #SoundHit1
 #SoundHit2 : #SoundTreasure : #SoundNewLevel : #SoundSpell : EndEnumeration
 Enumeration GameSprites
@@ -401,10 +401,16 @@ Procedure QuakeSpell(*Caster.TMonster)
   Next i
   ShakeAmount = 20
 EndProcedure
+Procedure MaelStromSpell(*Caster.TMonster)
+  ForEach Monsters()
+    MoveMonster(@Monsters(), RandomPassableTile()) : Monsters()\TeleportCounter = 2
+  Next
+EndProcedure
 Procedure InitSpells()
   Spells(#SpellWoop) = @WoopSpell() : SpellNames(Str(#SpellWoop)) = "WOOP"
   Spells(#SpellQuake) = @QuakeSpell() : SpellNames(Str(#SpellQuake)) = "QUAKE"
-  MaxSpellIndex = #SpellQuake
+  Spells(#SpellMaelstrom) = @MaelstromSpell() : SpellNames(Str(#SpellMaelstrom)) = "MAELSTROM"
+  MaxSpellIndex = #SpellMaelstrom
 EndProcedure
 Procedure CastMonsterSpell(*Monster.TMonster, Index.a);call this procedure to cast a spell
   If SelectElement(*Monster\Spells(), Index)
