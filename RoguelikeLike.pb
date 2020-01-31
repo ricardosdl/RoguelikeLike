@@ -20,7 +20,7 @@ Structure TScore
   Score.u : Run.u : TotalScore.l : Active.a
 EndStructure
 Prototype.a CallBackProc();our callback prototype
-Global NumPlayerSpells.a
+Global NumPlayerSpells.a, MaxSpellIndex.a
 Global TileSize.a = 64, NumTiles.a = 9, UIWidth.u = 4, GameWidth.u = TileSize * (NumTiles + UIWidth), GameHeight.u = TileSize * NumTiles,ExitGame.a = #False, SoundMuted.a = #False
 Global BasePath.s = "data" + #PS$, ElapsedTimneInS.f, LastTimeInMs.q, SoundInitiated.i = #False
 Global Dim Tiles.TTile(NumTiles - 1, NumTiles - 1), *RandomPassableTile.TTile, MaxSpells.a = 15, Dim Spells.i(MaxSpells - 1), NewMap SpellNames.s()
@@ -203,7 +203,7 @@ Procedure GenerateLevel()
     *Tile.TTile = RandomPassableTile() : *Tile\HasTreasure = #True
   Next
 EndProcedure
-Procedure.a GetRandomSpell() : ProcedureReturn Random(#SpellQuake, #SpellWoop) : EndProcedure
+Procedure.a GetRandomSpell() : ProcedureReturn Random(MaxSpellIndex, #SpellWoop) : EndProcedure
 Procedure InitPlayer(*Player.TMonster, *Tile.TTile, Sprite.u, Hp.b)
   InitMonster(*Player, *Tile, Sprite, Hp, #Player, #Null, #Null, 0)
   For i.a = 1 To NumPlayerSpells;initializing the player's spells list
@@ -404,6 +404,7 @@ EndProcedure
 Procedure InitSpells()
   Spells(#SpellWoop) = @WoopSpell() : SpellNames(Str(#SpellWoop)) = "WOOP"
   Spells(#SpellQuake) = @QuakeSpell() : SpellNames(Str(#SpellQuake)) = "QUAKE"
+  MaxSpellIndex = #SpellQuake
 EndProcedure
 Procedure CastMonsterSpell(*Monster.TMonster, Index.a);call this procedure to cast a spell
   If SelectElement(*Monster\Spells(), Index)
