@@ -7,7 +7,7 @@ Enumeration MonsterTypes : #Player : #Bird : #Snake : #Tank : #Eater : #Jester :
 Prototype DoStuffProc(*Monster) : Prototype UpdateMonsterProc(*Monster) : Prototype SpellProc(*Caster)
 Structure TMonster
   *Tile.TTile : Sprite.u : Hp.f : MonsterType.a : Dead.a : DoStuff.DoStuffProc : AttackedThisTurn.a
-  Stunned.a : Update.UpdateMonsterProc : TeleportCounter.b : OffsetX.f : OffsetY.f : List Spells.a()
+  Stunned.a : Update.UpdateMonsterProc : TeleportCounter.b : OffsetX.f : OffsetY.f : List Spells.b()
 EndStructure
 Enumeration SpellTypes : #SpellWoop : #SpellQuake : #SpellMaelstrom : #SpellMulligan : EndEnumeration
 Enumeration GameResources : #SpriteSheet : #TitleBackground : #Bitmap_Font_Sprite : #SoundHit1
@@ -20,7 +20,7 @@ Structure TScore
   Score.u : Run.u : TotalScore.l : Active.a
 EndStructure
 Prototype.a CallBackProc();our callback prototype
-Global NumPlayerSpells.a, MaxSpellIndex.a
+Global NumPlayerSpells.a, MaxSpellIndex.a : #No_Spell = -1
 Global TileSize.a = 64, NumTiles.a = 9, UIWidth.u = 4, GameWidth.u = TileSize * (NumTiles + UIWidth), GameHeight.u = TileSize * NumTiles,ExitGame.a = #False, SoundMuted.a = #False
 Global BasePath.s = "data" + #PS$, ElapsedTimneInS.f, LastTimeInMs.q, SoundInitiated.i = #False
 Global Dim Tiles.TTile(NumTiles - 1, NumTiles - 1), *RandomPassableTile.TTile, MaxSpells.a = 15, Dim Spells.i(MaxSpells - 1), NewMap SpellNames.s()
@@ -421,9 +421,9 @@ Procedure InitSpells()
   MaxSpellIndex = #SpellMulligan
 EndProcedure
 Procedure CastMonsterSpell(*Monster.TMonster, Index.a);call this procedure to cast a spell
-  If SelectElement(*Monster\Spells(), Index)
+  If SelectElement(*Monster\Spells(), Index) And *Monster\Spells() <> #No_Spell
     SpellProcedure.SpellProc = Spells(*Monster\Spells()) : SpellProcedure(*Monster)
-    DeleteElement(*Monster\Spells(), #True) : PlaySoundEffect(#SoundSpell) : Tick()
+    *Monster\Spells() = #No_Spell : PlaySoundEffect(#SoundSpell) : Tick()
   EndIf
 EndProcedure
 Procedure DrawTile(*Tile.TTile)
@@ -447,7 +447,7 @@ Procedure StartGame()
     BindEvent(#PB_Event_RenderFrame, @RenderFrame())
     FlipBuffers()
   CompilerEndIf
-  Level = 1 : Score = 0 : NumPlayerSpells = 9 : StartLevel(StartingHp) : GameState = "running"
+  Level = 1 : Score = 0 : NumPlayerSpells = 1 : StartLevel(StartingHp) : GameState = "running"
 EndProcedure
 Procedure UpdateKeyBoard(Elapsed.f)
   If (GameState = "title" Or GameState = "dead") And KeyboardReleased(#PB_Key_All)
