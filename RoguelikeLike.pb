@@ -9,7 +9,7 @@ Structure TMonster
   *Tile.TTile : Sprite.u : Hp.f : MonsterType.a : Dead.a : DoStuff.DoStuffProc : AttackedThisTurn.a
   Stunned.a : Update.UpdateMonsterProc : TeleportCounter.b : OffsetX.f : OffsetY.f : List Spells.a()
 EndStructure
-Enumeration SpellTypes : #SpellWoop : #SpellQuake : #SpellMaelstrom : EndEnumeration
+Enumeration SpellTypes : #SpellWoop : #SpellQuake : #SpellMaelstrom : #SpellMulligan : EndEnumeration
 Enumeration GameResources : #SpriteSheet : #TitleBackground : #Bitmap_Font_Sprite : #SoundHit1
 #SoundHit2 : #SoundTreasure : #SoundNewLevel : #SoundSpell : EndEnumeration
 Enumeration GameSprites
@@ -213,10 +213,16 @@ EndProcedure
 Procedure AddMonsterSpell(*Monster.TMonster)
   AddElement(*Monster\Spells()) : *Monster\Spells() = GetRandomSpell()
 EndProcedure
-Procedure StartLevel(StartingHp.a)
+Procedure StartLevel(StartingHp.a, KeepPlayerSpells.a = #False)
   SpawnRate = 15 : SpawnCounter = SpawnRate : GenerateLevel()
   *RandomPassableTile.TTile = RandomPassableTile()
-  InitPlayer(@Player, *RandomPassableTile, #SpritePlayer, StartingHp)
+  If Not KeepPlayerSpells
+    InitPlayer(@Player, *RandomPassableTile, #SpritePlayer, StartingHp)
+  Else
+    NewList PlayerSpells.a()
+    CopyList(Player\Spells(), PlayerSpells()) : InitPlayer(@Player, *RandomPassableTile, #SpritePlayer, StartingHp)
+    ClearList(Player\Spells()) : CopyList(PlayerSpells(), Player\Spells())
+  EndIf
   *RandomPassableTile = RandomPassableTile()
   ReplaceTile(#Exit, *RandomPassableTile\x, *RandomPassableTile\y)
 EndProcedure
@@ -402,15 +408,17 @@ Procedure QuakeSpell(*Caster.TMonster)
   ShakeAmount = 20
 EndProcedure
 Procedure MaelStromSpell(*Caster.TMonster)
-  ForEach Monsters()
-    MoveMonster(@Monsters(), RandomPassableTile()) : Monsters()\TeleportCounter = 2
-  Next
+  ForEach Monsters() : MoveMonster(@Monsters(), RandomPassableTile()) : Monsters()\TeleportCounter = 2 : Next
+EndProcedure
+Procedure MulliganSpell(*Caster.TMonster)
+  StartLevel(1, #True)
 EndProcedure
 Procedure InitSpells()
   Spells(#SpellWoop) = @WoopSpell() : SpellNames(Str(#SpellWoop)) = "WOOP"
   Spells(#SpellQuake) = @QuakeSpell() : SpellNames(Str(#SpellQuake)) = "QUAKE"
   Spells(#SpellMaelstrom) = @MaelstromSpell() : SpellNames(Str(#SpellMaelstrom)) = "MAELSTROM"
-  MaxSpellIndex = #SpellMaelstrom
+  Spells(#SpellMulligan) = @MulliganSpell() : SpellNames(Str(#SpellMulligan)) = "MULLIGAN"
+  MaxSpellIndex = #SpellMulligan
 EndProcedure
 Procedure CastMonsterSpell(*Monster.TMonster, Index.a);call this procedure to cast a spell
   If SelectElement(*Monster\Spells(), Index)
