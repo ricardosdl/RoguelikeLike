@@ -2,6 +2,7 @@
 Prototype StepOnTileProc(*Tile, *Monster)
 Structure TTile
   x.w : y.w : Sprite.u : Passable.a : TileType.a : *Monster.TMonster : StepOn.StepOnTileProc : HasTreasure.a
+  EffectCounter.b : SpriteEffect.a
 EndStructure
 Enumeration MonsterTypes : #Player : #Bird : #Snake : #Tank : #Eater : #Jester : EndEnumeration
 Prototype DoStuffProc(*Monster) : Prototype UpdateMonsterProc(*Monster) : Prototype SpellProc(*Caster)
@@ -9,12 +10,12 @@ Structure TMonster
   *Tile.TTile : Sprite.u : Hp.f : MonsterType.a : Dead.a : DoStuff.DoStuffProc : AttackedThisTurn.a
   Stunned.a : Update.UpdateMonsterProc : TeleportCounter.b : OffsetX.f : OffsetY.f : List Spells.b()
 EndStructure
-Enumeration SpellTypes : #SpellWoop : #SpellQuake : #SpellMaelstrom : #SpellMulligan : EndEnumeration
+Enumeration SpellTypes : #SpellWoop : #SpellQuake : #SpellMaelstrom : #SpellMulligan : #SpellAura : EndEnumeration
 Enumeration GameResources : #SpriteSheet : #TitleBackground : #Bitmap_Font_Sprite : #SoundHit1
 #SoundHit2 : #SoundTreasure : #SoundNewLevel : #SoundSpell : EndEnumeration
 Enumeration GameSprites
   #SpritePlayer : #SpritePlayerDeath : #SpriteFloor : #SpriteWall : #SpriteBird : #SpriteSnake : #SpriteTank
-  #SpriteEater : #SpriteJester : #SpriteHp : #SpriteTeleport : #SpriteExit : #SpriteTreasure
+  #SpriteEater : #SpriteJester : #SpriteHp : #SpriteTeleport : #SpriteExit : #SpriteTreasure : #SpriteAura
 EndEnumeration
 Structure TScore
   Score.u : Run.u : TotalScore.l : Active.a
@@ -55,8 +56,8 @@ Procedure LoadSprites()
   LoadSprite(#TitleBackground, BasePath + "graphics" + #PS$ + "title-background.png", #PB_Sprite_AlphaBlending)
   LoadSprite(#Bitmap_Font_Sprite, BasePath + "graphics" + #PS$ + "font.png", #PB_Sprite_AlphaBlending)
 EndProcedure
-Procedure DrawSprite(SpriteIndex.u, x.f, y.f)
-  ClipSprite(#SpriteSheet, SpriteIndex * 16, 0, 16, 16) : ZoomSprite(#SpriteSheet, TileSize, TileSize) : DisplayTransparentSprite(#SpriteSheet, x * TileSize + ShakeX, y * TileSize + ShakeY)
+Procedure DrawSprite(SpriteIndex.u, x.f, y.f, Intensity.a = 255)
+  ClipSprite(#SpriteSheet, SpriteIndex * 16, 0, 16, 16) : ZoomSprite(#SpriteSheet, TileSize, TileSize) : DisplayTransparentSprite(#SpriteSheet, x * TileSize + ShakeX, y * TileSize + ShakeY, Intensity)
 EndProcedure
 Procedure DrawBitmapText(x.f, y.f, Text.s, CharWidthPx.a = 16, CharHeightPx.a = 24);draw text is too slow on linux, let's try to use bitmap fonts
   ClipSprite(#Bitmap_Font_Sprite, #PB_Default, #PB_Default, #PB_Default, #PB_Default)
@@ -124,7 +125,7 @@ Procedure.u GenerateTiles()
         Tiles(i, j)\x = i : Tiles(i, j)\y = j : Tiles(i, j)\Sprite = #SpriteFloor : Tiles(i, j)\Passable = #True
         Tiles(i, j)\TileType = #Floor : Tiles(i, j)\StepOn = @StepOnFloor() : NumPassableTiles + 1
       EndIf
-      Tiles(i, j)\Monster = #Null : Tiles(i, j)\HasTreasure = #False
+      Tiles(i, j)\Monster = #Null : Tiles(i, j)\HasTreasure = #False : Tiles(i, j)\EffectCounter = 0
     Next j
   Next i
   ProcedureReturn NumPassableTiles
@@ -391,6 +392,7 @@ EndProcedure
 Procedure.a TryPlayerMonsterMove(*Player.TMonster, Dx.w, Dy.w)
   If TryMonsterMove(Player, Dx, Dy) : Tick() : EndIf
 EndProcedure
+Procedure SetTileEffect(*Tile.TTile, SpriteEffect.a) : *Tile\SpriteEffect = SpriteEffect : *Tile\EffectCounter = 30 : EndProcedure
 Procedure WoopSpell(*Caster.TMonster)
   MoveMonster(*Caster, RandomPassableTile())
 EndProcedure
@@ -413,12 +415,21 @@ EndProcedure
 Procedure MulliganSpell(*Caster.TMonster)
   StartLevel(1, #True)
 EndProcedure
+Procedure AuraSpell(*Caster.TMonster) : NewList AdjacentNeighbors.i()
+  GetTileAdjacentNeighbors(*Caster\Tile, AdjacentNeighbors())
+  ForEach AdjacentNeighbors() : *AdjacentTile.TTile = AdjacentNeighbors()
+    SetTileEffect(*AdjacentTile, #SpriteAura)
+    If *AdjacentTile\Monster <> #Null : HealMonsterEater(*AdjacentTile\Monster, 1) : EndIf
+  Next
+  SetTileEffect(*Caster\Tile, #SpriteAura) : HealMonsterEater(*Caster, 1)
+EndProcedure
 Procedure InitSpells()
   Spells(#SpellWoop) = @WoopSpell() : SpellNames(Str(#SpellWoop)) = "WOOP"
   Spells(#SpellQuake) = @QuakeSpell() : SpellNames(Str(#SpellQuake)) = "QUAKE"
   Spells(#SpellMaelstrom) = @MaelstromSpell() : SpellNames(Str(#SpellMaelstrom)) = "MAELSTROM"
   Spells(#SpellMulligan) = @MulliganSpell() : SpellNames(Str(#SpellMulligan)) = "MULLIGAN"
-  MaxSpellIndex = #SpellMulligan
+  Spells(#SpellAura) = @AuraSpell() : SpellNames(Str(#SpellAura)) = "AURA"
+  MaxSpellIndex = #SpellAura
 EndProcedure
 Procedure CastMonsterSpell(*Monster.TMonster, Index.a);call this procedure to cast a spell
   If SelectElement(*Monster\Spells(), Index) And *Monster\Spells() <> #No_Spell
@@ -429,6 +440,9 @@ EndProcedure
 Procedure DrawTile(*Tile.TTile)
   DrawSprite(*Tile\Sprite, *Tile\x, *Tile\y)
   If *Tile\HasTreasure : DrawSprite(#SpriteTreasure, *Tile\x, *Tile\y) : EndIf
+  If *Tile\EffectCounter : *Tile\EffectCounter - 1
+    DrawSprite(*Tile\SpriteEffect, *Tile\x, *Tile\y, *Tile\EffectCounter / 30.0 * 255)
+  EndIf
 EndProcedure
 Procedure PlaySoundEffect(Sound.a)
   If SoundInitiated
@@ -447,7 +461,7 @@ Procedure StartGame()
     BindEvent(#PB_Event_RenderFrame, @RenderFrame())
     FlipBuffers()
   CompilerEndIf
-  Level = 1 : Score = 0 : NumPlayerSpells = 1 : StartLevel(StartingHp) : GameState = "running"
+  Level = 1 : Score = 0 : NumPlayerSpells = 9 : StartLevel(StartingHp) : GameState = "running"
 EndProcedure
 Procedure UpdateKeyBoard(Elapsed.f)
   If (GameState = "title" Or GameState = "dead") And KeyboardReleased(#PB_Key_All)
