@@ -6,16 +6,17 @@ Structure TTile
 EndStructure
 Enumeration MonsterTypes : #Player : #Bird : #Snake : #Tank : #Eater : #Jester : EndEnumeration
 Prototype DoStuffProc(*Monster) : Prototype UpdateMonsterProc(*Monster) : Prototype SpellProc(*Caster)
-Structure TMonster
-  *Tile.TTile : Sprite.u : Hp.f : MonsterType.a : Dead.a : DoStuff.DoStuffProc : AttackedThisTurn.a
-  Stunned.a : Update.UpdateMonsterProc : TeleportCounter.b : OffsetX.f : OffsetY.f : List Spells.b()
+Structure TMonster : *Tile.TTile : Sprite.u : Hp.f : MonsterType.a : Dead.a : DoStuff.DoStuffProc
+  AttackedThisTurn.a : Stunned.a : Update.UpdateMonsterProc : TeleportCounter.b : OffsetX.f : OffsetY.f
+  List Spells.b() : Array LastMove.b(1)
 EndStructure
-Enumeration SpellTypes : #SpellWoop : #SpellQuake : #SpellMaelstrom : #SpellMulligan : #SpellAura : EndEnumeration
+Enumeration SpellTypes : #SpellWoop : #SpellQuake : #SpellMaelstrom : #SpellMulligan : #SpellAura : #SpellDash : EndEnumeration
 Enumeration GameResources : #SpriteSheet : #TitleBackground : #Bitmap_Font_Sprite : #SoundHit1
 #SoundHit2 : #SoundTreasure : #SoundNewLevel : #SoundSpell : EndEnumeration
 Enumeration GameSprites
   #SpritePlayer : #SpritePlayerDeath : #SpriteFloor : #SpriteWall : #SpriteBird : #SpriteSnake : #SpriteTank
-  #SpriteEater : #SpriteJester : #SpriteHp : #SpriteTeleport : #SpriteExit : #SpriteTreasure : #SpriteAura
+  #SpriteEater : #SpriteJester : #SpriteHp : #SpriteTeleport : #SpriteExit : #SpriteTreasure : #SpriteHeal
+  #SpriteExplosion
 EndEnumeration
 Structure TScore
   Score.u : Run.u : TotalScore.l : Active.a
@@ -263,7 +264,8 @@ Procedure InitMonster(*Monster.TMonster, *Tile.TTile, Sprite.u, Hp.b, MonsterTyp
   *Monster\Sprite = Sprite : *Monster\Hp = Hp : *Monster\MonsterType = MonsterType
   *Monster\Dead = #False : *Monster\DoStuff = DoStuff : *Monster\AttackedThisTurn = #False : *Monster\Stunned = #False
   *Monster\Update = UpdateMonsterProc : *Monster\TeleportCounter = TeleportCounter : *Monster\OffsetX = 0.0 : *Monster\OffsetY = 0.0
-  *Monster\Tile = #Null : ClearList(*Monster\Spells()) :  MoveMonster(*Monster, *Tile)
+  *Monster\Tile = #Null : ClearList(*Monster\Spells()) : MoveMonster(*Monster, *Tile)
+  *Monster\LastMove(0) = -1 : *Monster\LastMove(1) = 0
 EndProcedure
 Procedure DoMonsterStuff(*Monster.TMonster)
   NewList AdjacentPassableNeighbors.i()
@@ -328,6 +330,7 @@ EndProcedure
 Procedure.a TryMonsterMove(*Monster.TMonster, Dx.w, Dy.w)
   *NewTile.TTile = GetTileNeighbor(*Monster\Tile, Dx, Dy)
   If *NewTile <> #Null And *NewTile\Passable
+    *Monster\LastMove(0) = Dx : *Monster\LastMove(1) = Dy
     If *NewTile\Monster = #Null
       MoveMonster(*Monster, *NewTile)
     Else
@@ -418,10 +421,25 @@ EndProcedure
 Procedure AuraSpell(*Caster.TMonster) : NewList AdjacentNeighbors.i()
   GetTileAdjacentNeighbors(*Caster\Tile, AdjacentNeighbors())
   ForEach AdjacentNeighbors() : *AdjacentTile.TTile = AdjacentNeighbors()
-    SetTileEffect(*AdjacentTile, #SpriteAura)
+    SetTileEffect(*AdjacentTile, #SpriteHeal)
     If *AdjacentTile\Monster <> #Null : HealMonsterEater(*AdjacentTile\Monster, 1) : EndIf
   Next
-  SetTileEffect(*Caster\Tile, #SpriteAura) : HealMonsterEater(*Caster, 1)
+  SetTileEffect(*Caster\Tile, #SpriteHeal) : HealMonsterEater(*Caster, 1)
+EndProcedure
+Procedure DashSpell(*Caster.TMonster) : *NewTile.TTile = *Caster\Tile
+  While #True : *TestTile.TTile = GetTileNeighbor(*NewTile, Player\LastMove(0), Player\LastMove(1))
+    If *TestTile\Passable And *TestTile\Monster = #Null
+      *NewTile = *TestTile
+      Else : Break : EndIf
+  Wend
+  If *Caster\Tile <> *NewTile
+    MoveMonster(*Caster, *NewTile) : NewList AdjacentNeighbors.i() : GetTileAdjacentNeighbors(*NewTile, AdjacentNeighbors())
+    ForEach AdjacentNeighbors() : *NeighborTile.TTile = AdjacentNeighbors()
+      If *NeighborTile\Monster <> #Null
+        SetTileEffect(*NeighborTile, #SpriteExplosion) : *NeighborTile\Monster\Stunned = #True : HitMonster(*NeighborTile\Monster, 1)
+      EndIf
+    Next
+  EndIf
 EndProcedure
 Procedure InitSpells()
   Spells(#SpellWoop) = @WoopSpell() : SpellNames(Str(#SpellWoop)) = "WOOP"
@@ -429,7 +447,8 @@ Procedure InitSpells()
   Spells(#SpellMaelstrom) = @MaelstromSpell() : SpellNames(Str(#SpellMaelstrom)) = "MAELSTROM"
   Spells(#SpellMulligan) = @MulliganSpell() : SpellNames(Str(#SpellMulligan)) = "MULLIGAN"
   Spells(#SpellAura) = @AuraSpell() : SpellNames(Str(#SpellAura)) = "AURA"
-  MaxSpellIndex = #SpellAura
+  Spells(#SpellDash) = @DashSpell() : SpellNames(Str(#SpellDash)) = "DASH"
+  MaxSpellIndex = #SpellDash
 EndProcedure
 Procedure CastMonsterSpell(*Monster.TMonster, Index.a);call this procedure to cast a spell
   If SelectElement(*Monster\Spells(), Index) And *Monster\Spells() <> #No_Spell
