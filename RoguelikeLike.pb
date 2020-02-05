@@ -143,9 +143,7 @@ Procedure GetRandomPassableTile()
 EndProcedure
 Procedure TryTo(Description.s, Callback.CallbackProc)
   For i.u = 1000 To 1 Step -1
-    If Callback()
-      ProcedureReturn
-    EndIf
+    If Callback() : ProcedureReturn : EndIf
   Next i
   RaiseError(#PB_OnError_IllegalInstruction)
 EndProcedure
@@ -257,9 +255,7 @@ Procedure MoveMonster(*Monster.TMonster, *NewTile.TTile)
     *Monster\OffsetX = *Monster\Tile\x - *NewTile\x : *Monster\OffsetY = *Monster\Tile\y - *NewTile\y
   EndIf
   *Monster\Tile = *NewTile : *NewTile\Monster = *Monster
-  If *NewTile\StepOn <> #Null
-    *NewTile\StepOn(*NewTile, *Monster)
-  EndIf
+  If *NewTile\StepOn <> #Null : *NewTile\StepOn(*NewTile, *Monster) : EndIf
 EndProcedure
 Procedure InitMonster(*Monster.TMonster, *Tile.TTile, Sprite.u, Hp.b, MonsterType.a,
     DoStuff.DoStuffProc, UpdateMonsterProc.UpdateMonsterProc, TeleportCounter.b)
@@ -579,7 +575,6 @@ Procedure UpdateKeyBoard(Elapsed.f)
     ElseIf KeyboardReleased(#PB_Key_8) : CastMonsterSpell(@Player, #PB_Key_8 - 2)  
     ElseIf KeyboardReleased(#PB_Key_9) : CastMonsterSpell(@Player, #PB_Key_9 - 2)
     EndIf
-    
   EndIf
 EndProcedure
 If InitSprite() = 0 Or InitKeyboard() = 0
