@@ -19,9 +19,7 @@ Enumeration GameSprites
   #SpriteEater : #SpriteJester : #SpriteHp : #SpriteTeleport : #SpriteExit : #SpriteTreasure : #SpriteHeal
   #SpriteExplosion
 EndEnumeration
-Structure TScore
-  Score.u : Run.u : TotalScore.l : Active.a
-EndStructure
+Structure TScore : Score.u : Run.u : TotalScore.l : Active.a EndStructure
 Prototype.a CallBackProc();our callback prototype
 Global NumPlayerSpells.a, MaxSpellIndex.a : #No_Spell = -1
 Global TileSize.a = 64, NumTiles.a = 9, UIWidth.u = 4, GameWidth.u = TileSize * (NumTiles + UIWidth), GameHeight.u = TileSize * NumTiles,ExitGame.a = #False, SoundMuted.a = #False
@@ -471,8 +469,7 @@ Procedure BubbleSpell(*Caster.TMonster)
     EndIf
   Next
 EndProcedure
-Procedure BraverySpell(*Caster.TMonster)
-  *Caster\Shield = 2
+Procedure BraverySpell(*Caster.TMonster) : *Caster\Shield = 2
   ForEach Monsters() : Monsters()\Stunned = #True : Next
 EndProcedure
 Procedure InitSpells()
