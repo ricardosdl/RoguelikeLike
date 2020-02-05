@@ -8,10 +8,10 @@ Enumeration MonsterTypes : #Player : #Bird : #Snake : #Tank : #Eater : #Jester :
 Prototype DoStuffProc(*Monster) : Prototype UpdateMonsterProc(*Monster) : Prototype SpellProc(*Caster)
 Structure TMonster : *Tile.TTile : Sprite.u : Hp.f : MonsterType.a : Dead.a : DoStuff.DoStuffProc
   AttackedThisTurn.a : Stunned.a : Update.UpdateMonsterProc : TeleportCounter.b : OffsetX.f : OffsetY.f
-  List Spells.b() : Array LastMove.b(1)
+  List Spells.b() : Array LastMove.b(1) : BonusAttack.a
 EndStructure
 Enumeration SpellTypes : #SpellWoop : #SpellQuake : #SpellMaelstrom : #SpellMulligan : #SpellAura : #SpellDash
-#SpellDig : #SpellKingMaker : #SpellAlchemy : EndEnumeration
+#SpellDig : #SpellKingMaker : #SpellAlchemy : #SpellPower : EndEnumeration
 Enumeration GameResources : #SpriteSheet : #TitleBackground : #Bitmap_Font_Sprite : #SoundHit1
 #SoundHit2 : #SoundTreasure : #SoundNewLevel : #SoundSpell : EndEnumeration
 Enumeration GameSprites
@@ -266,7 +266,7 @@ Procedure InitMonster(*Monster.TMonster, *Tile.TTile, Sprite.u, Hp.b, MonsterTyp
   *Monster\Dead = #False : *Monster\DoStuff = DoStuff : *Monster\AttackedThisTurn = #False : *Monster\Stunned = #False
   *Monster\Update = UpdateMonsterProc : *Monster\TeleportCounter = TeleportCounter : *Monster\OffsetX = 0.0 : *Monster\OffsetY = 0.0
   *Monster\Tile = #Null : ClearList(*Monster\Spells()) : MoveMonster(*Monster, *Tile)
-  *Monster\LastMove(0) = -1 : *Monster\LastMove(1) = 0
+  *Monster\LastMove(0) = -1 : *Monster\LastMove(1) = 0 : *Monster\BonusAttack = 0
 EndProcedure
 Procedure DoMonsterStuff(*Monster.TMonster)
   NewList AdjacentPassableNeighbors.i()
@@ -336,7 +336,7 @@ Procedure.a TryMonsterMove(*Monster.TMonster, Dx.w, Dy.w)
       MoveMonster(*Monster, *NewTile)
     Else
       If *Monster\MonsterType = #Player Or *NewTile\Monster\MonsterType = #Player
-        *Monster\AttackedThisTurn = #True : *NewTile\Monster\Stunned = #True : HitMonster(*NewTile\Monster, 1)
+        *Monster\AttackedThisTurn = #True : *NewTile\Monster\Stunned = #True : HitMonster(*NewTile\Monster, 1 + *Monster\BonusAttack) : *Monster\BonusAttack = 0
         *Monster\OffsetX = (*NewTile\x - *Monster\Tile\x) / 2 : *Monster\OffsetY = (*NewTile\y - *Monster\Tile\y) / 2
         ShakeAmount = 5
       EndIf
@@ -461,6 +461,7 @@ Procedure AlchemySpell(*Caster.TMonster) : NewList AdjacentNeighbors.i()
     EndIf
   Next
 EndProcedure
+Procedure PowerSpell(*Caster.TMonster) : *Caster\BonusAttack = 5 : EndProcedure
 Procedure InitSpells()
   Spells(#SpellWoop) = @WoopSpell() : SpellNames(Str(#SpellWoop)) = "WOOP"
   Spells(#SpellQuake) = @QuakeSpell() : SpellNames(Str(#SpellQuake)) = "QUAKE"
@@ -471,7 +472,8 @@ Procedure InitSpells()
   Spells(#SpellDig) = @DigSpell() : SpellNames(Str(#SpellDig)) = "DIG"
   Spells(#SpellKingMaker) = @KingMakerSpell() : SpellNames(Str(#SpellKingMaker)) = "KINGMAKER"
   Spells(#SpellAlchemy) = @AlchemySpell() : SpellNames(Str(#SpellAlchemy)) = "ALCHEMY"
-  MaxSpellIndex = #SpellAlchemy
+  Spells(#SpellPower) = @PowerSpell() : SpellNames(Str(#SpellPower)) = "POWER"
+  MaxSpellIndex = #SpellPower
 EndProcedure
 Procedure CastMonsterSpell(*Monster.TMonster, Index.a);call this procedure to cast a spell
   If SelectElement(*Monster\Spells(), Index) And *Monster\Spells() <> #No_Spell
