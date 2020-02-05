@@ -11,7 +11,7 @@ Structure TMonster : *Tile.TTile : Sprite.u : Hp.f : MonsterType.a : Dead.a : Do
   List Spells.b() : Array LastMove.b(1) : BonusAttack.a : Shield.b
 EndStructure
 Enumeration SpellTypes : #SpellWoop : #SpellQuake : #SpellMaelstrom : #SpellMulligan : #SpellAura : #SpellDash
-#SpellDig : #SpellKingMaker : #SpellAlchemy : #SpellPower : #SpellBubble : #SpellBravery : #SpellBolt : EndEnumeration
+#SpellDig : #SpellKingMaker : #SpellAlchemy : #SpellPower : #SpellBubble : #SpellBravery : #SpellBolt : #SpellCross : EndEnumeration
 Enumeration GameResources : #SpriteSheet : #TitleBackground : #Bitmap_Font_Sprite : #SoundHit1
 #SoundHit2 : #SoundTreasure : #SoundNewLevel : #SoundSpell : EndEnumeration
 Enumeration GameSprites
@@ -490,6 +490,14 @@ EndProcedure
 Procedure BoltSpell(*Caster.TMonster)
   BoltTravel(*Caster, *Caster\LastMove(), Int(#SpriteBolt + Abs(*Caster\LastMove(1))), 4)
 EndProcedure
+Procedure CrossSpell(*Caster.TMonster)
+  Directions.s = "0,-1,0,1,-1,0,1,0" : NumDirections.a = CountString(Directions, ",") + 1
+  For i.a = 0 To (NumDirections / 2) - 1 : Dim Direction.b(1)
+    Direction(0) = Val(StringField(Directions, i * 2 + 1, ","))
+    Direction(1) = Val(StringField(Directions, i * 2 + 1 + 1, ","))
+    BoltTravel(*Caster, Direction(), Int(#SpriteBolt) + Abs(Direction(1)), 2)
+  Next
+EndProcedure
 Procedure InitSpells()
   Spells(#SpellWoop) = @WoopSpell() : SpellNames(Str(#SpellWoop)) = "WOOP"
   Spells(#SpellQuake) = @QuakeSpell() : SpellNames(Str(#SpellQuake)) = "QUAKE"
@@ -504,7 +512,8 @@ Procedure InitSpells()
   Spells(#SpellBubble) = @BubbleSpell() : SpellNames(Str(#SpellBubble)) = "BUBBLE"
   Spells(#SpellBravery) = @BraverySpell() : SpellNames(Str(#SpellBravery)) = "BRAVERY"
   Spells(#SpellBolt) = @BoltSpell() : SpellNames(Str(#SpellBolt)) = "BOLT"
-  MaxSpellIndex = #SpellBolt
+  Spells(#SpellCross) = @CrossSpell() : SpellNames(Str(#SpellCross)) = "CROSS"
+  MaxSpellIndex = #SpellCross
 EndProcedure
 Procedure CastMonsterSpell(*Monster.TMonster, Index.a);call this procedure to cast a spell
   If SelectElement(*Monster\Spells(), Index) And *Monster\Spells() <> #No_Spell
