@@ -11,7 +11,7 @@ Structure TMonster : *Tile.TTile : Sprite.u : Hp.f : MonsterType.a : Dead.a : Do
   List Spells.b() : Array LastMove.b(1)
 EndStructure
 Enumeration SpellTypes : #SpellWoop : #SpellQuake : #SpellMaelstrom : #SpellMulligan : #SpellAura : #SpellDash
-#SpellDig : #SpellKingMaker: EndEnumeration
+#SpellDig : #SpellKingMaker : #SpellAlchemy : EndEnumeration
 Enumeration GameResources : #SpriteSheet : #TitleBackground : #Bitmap_Font_Sprite : #SoundHit1
 #SoundHit2 : #SoundTreasure : #SoundNewLevel : #SoundSpell : EndEnumeration
 Enumeration GameSprites
@@ -242,7 +242,7 @@ Procedure StepOnExit(*Tile.TTile, *Monster.TMonster)
 EndProcedure
 Procedure ReplaceTile(NewTileType.a, x.w, y.w)
   If NewTileType = #Floor
-    Tiles(x, y)\Sprite = #SpriteFloor : Tiles(x, y)\Passable = #True : Tiles(x, y)\TileType = #Floor
+    Tiles(x, y)\Sprite = #SpriteFloor : Tiles(x, y)\Passable = #True : Tiles(x, y)\TileType = #Floor : Tiles(x, y)\StepOn = @StepOnFloor()
   ElseIf NewTileType = #Wall
     Tiles(x, y)\Sprite = #SpriteWall : Tiles(x, y)\Passable = #False : Tiles(x, y)\TileType = #Wall
   ElseIf NewTileType = #Exit
@@ -453,6 +453,14 @@ EndProcedure
 Procedure KingMakerSpell(*Caster.TMonster)
   ForEach Monsters() : HealMonsterEater(@Monsters(), 1) : Monsters()\Tile\HasTreasure = #True : Next
 EndProcedure
+Procedure AlchemySpell(*Caster.TMonster) : NewList AdjacentNeighbors.i()
+  GetTileAdjacentNeighbors(*Caster\Tile, AdjacentNeighbors())
+  ForEach AdjacentNeighbors() : *CurrentTile.TTile = AdjacentNeighbors()
+    If Not *CurrentTile\Passable And InBounds(*CurrentTile\x, *CurrentTile\y)
+      ReplaceTile(#Floor, *CurrentTile\x, *CurrentTile\y) : *CurrentTile\HasTreasure = #True
+    EndIf
+  Next
+EndProcedure
 Procedure InitSpells()
   Spells(#SpellWoop) = @WoopSpell() : SpellNames(Str(#SpellWoop)) = "WOOP"
   Spells(#SpellQuake) = @QuakeSpell() : SpellNames(Str(#SpellQuake)) = "QUAKE"
@@ -462,7 +470,8 @@ Procedure InitSpells()
   Spells(#SpellDash) = @DashSpell() : SpellNames(Str(#SpellDash)) = "DASH"
   Spells(#SpellDig) = @DigSpell() : SpellNames(Str(#SpellDig)) = "DIG"
   Spells(#SpellKingMaker) = @KingMakerSpell() : SpellNames(Str(#SpellKingMaker)) = "KINGMAKER"
-  MaxSpellIndex = #SpellKingMaker
+  Spells(#SpellAlchemy) = @AlchemySpell() : SpellNames(Str(#SpellAlchemy)) = "ALCHEMY"
+  MaxSpellIndex = #SpellAlchemy
 EndProcedure
 Procedure CastMonsterSpell(*Monster.TMonster, Index.a);call this procedure to cast a spell
   If SelectElement(*Monster\Spells(), Index) And *Monster\Spells() <> #No_Spell
