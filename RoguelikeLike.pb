@@ -11,15 +11,15 @@ Structure TMonster : *Tile.TTile : Sprite.u : Hp.f : MonsterType.a : Dead.a : Do
   List Spells.b() : Array LastMove.b(1) : BonusAttack.a : Shield.b
 EndStructure
 Enumeration SpellTypes : #SpellWoop : #SpellQuake : #SpellMaelstrom : #SpellMulligan : #SpellAura : #SpellDash
-#SpellDig : #SpellKingMaker : #SpellAlchemy : #SpellPower : #SpellBubble : #SpellBravery : EndEnumeration
+#SpellDig : #SpellKingMaker : #SpellAlchemy : #SpellPower : #SpellBubble : #SpellBravery : #SpellBolt : EndEnumeration
 Enumeration GameResources : #SpriteSheet : #TitleBackground : #Bitmap_Font_Sprite : #SoundHit1
 #SoundHit2 : #SoundTreasure : #SoundNewLevel : #SoundSpell : EndEnumeration
 Enumeration GameSprites
   #SpritePlayer : #SpritePlayerDeath : #SpriteFloor : #SpriteWall : #SpriteBird : #SpriteSnake : #SpriteTank
   #SpriteEater : #SpriteJester : #SpriteHp : #SpriteTeleport : #SpriteExit : #SpriteTreasure : #SpriteHeal
-  #SpriteExplosion
+  #SpriteExplosion : #SpriteBolt
 EndEnumeration
-Structure TScore : Score.u : Run.u : TotalScore.l : Active.a EndStructure
+Structure TScore : Score.u : Run.u : TotalScore.l : Active.a : EndStructure
 Prototype.a CallBackProc();our callback prototype
 Global NumPlayerSpells.a, MaxSpellIndex.a : #No_Spell = -1
 Global TileSize.a = 64, NumTiles.a = 9, UIWidth.u = 4, GameWidth.u = TileSize * (NumTiles + UIWidth), GameHeight.u = TileSize * NumTiles,ExitGame.a = #False, SoundMuted.a = #False
@@ -396,6 +396,21 @@ Procedure.a TryPlayerMonsterMove(*Player.TMonster, Dx.w, Dy.w)
   If TryMonsterMove(*Player, Dx, Dy) : Tick() : EndIf
 EndProcedure
 Procedure SetTileEffect(*Tile.TTile, SpriteEffect.a) : *Tile\SpriteEffect = SpriteEffect : *Tile\EffectCounter = 30 : EndProcedure
+Procedure BoltTravel(*Caster.TMonster, Array Direction.b(1), Effect.a, Damage.a)
+  *NewTile.TTile = *Caster\Tile
+  While #True
+    *TestTile.TTile = GetTileNeighbor(*NewTile, Direction(0), Direction(1))
+    If *TestTile\Passable
+      *NewTile = *TestTile
+      If *NewTile\Monster <> #Null
+        HitMonster(*NewTile\Monster, Damage)
+      EndIf
+      SetTileEffect(*NewTile, Effect)
+    Else
+      Break
+    EndIf
+  Wend
+EndProcedure
 Procedure WoopSpell(*Caster.TMonster)
   MoveMonster(*Caster, RandomPassableTile())
 EndProcedure
@@ -472,6 +487,9 @@ EndProcedure
 Procedure BraverySpell(*Caster.TMonster) : *Caster\Shield = 2
   ForEach Monsters() : Monsters()\Stunned = #True : Next
 EndProcedure
+Procedure BoltSpell(*Caster.TMonster)
+  BoltTravel(*Caster, *Caster\LastMove(), Int(#SpriteBolt + Abs(*Caster\LastMove(1))), 4)
+EndProcedure
 Procedure InitSpells()
   Spells(#SpellWoop) = @WoopSpell() : SpellNames(Str(#SpellWoop)) = "WOOP"
   Spells(#SpellQuake) = @QuakeSpell() : SpellNames(Str(#SpellQuake)) = "QUAKE"
@@ -485,7 +503,8 @@ Procedure InitSpells()
   Spells(#SpellPower) = @PowerSpell() : SpellNames(Str(#SpellPower)) = "POWER"
   Spells(#SpellBubble) = @BubbleSpell() : SpellNames(Str(#SpellBubble)) = "BUBBLE"
   Spells(#SpellBravery) = @BraverySpell() : SpellNames(Str(#SpellBravery)) = "BRAVERY"
-  MaxSpellIndex = #SpellBravery
+  Spells(#SpellBolt) = @BoltSpell() : SpellNames(Str(#SpellBolt)) = "BOLT"
+  MaxSpellIndex = #SpellBolt
 EndProcedure
 Procedure CastMonsterSpell(*Monster.TMonster, Index.a);call this procedure to cast a spell
   If SelectElement(*Monster\Spells(), Index) And *Monster\Spells() <> #No_Spell
