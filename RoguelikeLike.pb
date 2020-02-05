@@ -8,10 +8,10 @@ Enumeration MonsterTypes : #Player : #Bird : #Snake : #Tank : #Eater : #Jester :
 Prototype DoStuffProc(*Monster) : Prototype UpdateMonsterProc(*Monster) : Prototype SpellProc(*Caster)
 Structure TMonster : *Tile.TTile : Sprite.u : Hp.f : MonsterType.a : Dead.a : DoStuff.DoStuffProc
   AttackedThisTurn.a : Stunned.a : Update.UpdateMonsterProc : TeleportCounter.b : OffsetX.f : OffsetY.f
-  List Spells.b() : Array LastMove.b(1) : BonusAttack.a
+  List Spells.b() : Array LastMove.b(1) : BonusAttack.a : Shield.b
 EndStructure
 Enumeration SpellTypes : #SpellWoop : #SpellQuake : #SpellMaelstrom : #SpellMulligan : #SpellAura : #SpellDash
-#SpellDig : #SpellKingMaker : #SpellAlchemy : #SpellPower : #SpellBubble : EndEnumeration
+#SpellDig : #SpellKingMaker : #SpellAlchemy : #SpellPower : #SpellBubble : #SpellBravery : EndEnumeration
 Enumeration GameResources : #SpriteSheet : #TitleBackground : #Bitmap_Font_Sprite : #SoundHit1
 #SoundHit2 : #SoundTreasure : #SoundNewLevel : #SoundSpell : EndEnumeration
 Enumeration GameSprites
@@ -207,8 +207,11 @@ Procedure GenerateLevel()
   Next
 EndProcedure
 Procedure.a GetRandomSpell() : ProcedureReturn Random(MaxSpellIndex, #SpellWoop) : EndProcedure
+Procedure UpdatePlayer(*Player.TMonster)
+  If *Player\Shield > 0 : *Player\Shield - 1 : EndIf
+EndProcedure
 Procedure InitPlayer(*Player.TMonster, *Tile.TTile, Sprite.u, Hp.b)
-  InitMonster(*Player, *Tile, Sprite, Hp, #Player, #Null, #Null, 0)
+  InitMonster(*Player, *Tile, Sprite, Hp, #Player, #Null, @UpdatePlayer(), 0)
   For i.a = 1 To NumPlayerSpells;initializing the player's spells list
     AddElement(*Player\Spells()) : *Player\Spells() = GetRandomSpell()
   Next
@@ -266,7 +269,7 @@ Procedure InitMonster(*Monster.TMonster, *Tile.TTile, Sprite.u, Hp.b, MonsterTyp
   *Monster\Dead = #False : *Monster\DoStuff = DoStuff : *Monster\AttackedThisTurn = #False : *Monster\Stunned = #False
   *Monster\Update = UpdateMonsterProc : *Monster\TeleportCounter = TeleportCounter : *Monster\OffsetX = 0.0 : *Monster\OffsetY = 0.0
   *Monster\Tile = #Null : ClearList(*Monster\Spells()) : MoveMonster(*Monster, *Tile)
-  *Monster\LastMove(0) = -1 : *Monster\LastMove(1) = 0 : *Monster\BonusAttack = 0
+  *Monster\LastMove(0) = -1 : *Monster\LastMove(1) = 0 : *Monster\BonusAttack = 0 : *Monster\Shield = 0
 EndProcedure
 Procedure DoMonsterStuff(*Monster.TMonster)
   NewList AdjacentPassableNeighbors.i()
@@ -301,7 +304,6 @@ EndProcedure
 Procedure.i InitAMonster(*Tile.TTile, MonsterType.a)
   AddElement(Monsters())
   Select MonsterType
-    Case #Player
     Case #Bird : InitMonster(@Monsters(), *Tile, #SpriteBird, 3, #Bird, @DoMonsterStuff(), @UpdateMonster(), 2)
     Case #Snake : InitMonster(@Monsters(), *Tile, #SpriteSnake, 1, #Snake, @DoSnakeStuff(), @UpdateMonster(), 2)
     Case #Tank : InitMonster(@Monsters(), *Tile, #SpriteTank, 2, #Tank, @DoMonsterStuff(), @UpdateTankMonster(), 2)
@@ -323,7 +325,7 @@ EndProcedure
 Procedure DieMonster(*Monster.TMonster)
   *Monster\Dead = #True : *Monster\Tile\Monster = #Null : *Monster\Sprite = #SpritePlayerDeath
 EndProcedure
-Procedure HitMonster(*Monster.TMonster, Damage.a)
+Procedure HitMonster(*Monster.TMonster, Damage.a) : If *Monster\Shield > 0 : ProcedureReturn : EndIf
   *Monster\hp - Damage
   If *Monster\hp <= 0 : DieMonster(*Monster) : EndIf
   If *Monster\MonsterType = #Player : PlaySoundEffect(#SoundHit1) : Else : PlaySoundEffect(#SoundHit2) : EndIf
@@ -385,16 +387,15 @@ Procedure Tick()
       DeleteElement(Monsters())
     EndIf
   Next
+  Player\Update(@Player)
   If Player\Dead : AddScore(Score, #False) : GameState = "dead" : EndIf
-  
   SpawnCounter - 1
   If SpawnCounter <= 0
     SpawnMonster() : SpawnCounter = SpawnRate : SpawnRate - 1
   EndIf
-  
 EndProcedure
 Procedure.a TryPlayerMonsterMove(*Player.TMonster, Dx.w, Dy.w)
-  If TryMonsterMove(Player, Dx, Dy) : Tick() : EndIf
+  If TryMonsterMove(*Player, Dx, Dy) : Tick() : EndIf
 EndProcedure
 Procedure SetTileEffect(*Tile.TTile, SpriteEffect.a) : *Tile\SpriteEffect = SpriteEffect : *Tile\EffectCounter = 30 : EndProcedure
 Procedure WoopSpell(*Caster.TMonster)
@@ -470,6 +471,10 @@ Procedure BubbleSpell(*Caster.TMonster)
     EndIf
   Next
 EndProcedure
+Procedure BraverySpell(*Caster.TMonster)
+  *Caster\Shield = 2
+  ForEach Monsters() : Monsters()\Stunned = #True : Next
+EndProcedure
 Procedure InitSpells()
   Spells(#SpellWoop) = @WoopSpell() : SpellNames(Str(#SpellWoop)) = "WOOP"
   Spells(#SpellQuake) = @QuakeSpell() : SpellNames(Str(#SpellQuake)) = "QUAKE"
@@ -482,7 +487,8 @@ Procedure InitSpells()
   Spells(#SpellAlchemy) = @AlchemySpell() : SpellNames(Str(#SpellAlchemy)) = "ALCHEMY"
   Spells(#SpellPower) = @PowerSpell() : SpellNames(Str(#SpellPower)) = "POWER"
   Spells(#SpellBubble) = @BubbleSpell() : SpellNames(Str(#SpellBubble)) = "BUBBLE"
-  MaxSpellIndex = #SpellBubble
+  Spells(#SpellBravery) = @BraverySpell() : SpellNames(Str(#SpellBravery)) = "BRAVERY"
+  MaxSpellIndex = #SpellBravery
 EndProcedure
 Procedure CastMonsterSpell(*Monster.TMonster, Index.a);call this procedure to cast a spell
   If SelectElement(*Monster\Spells(), Index) And *Monster\Spells() <> #No_Spell
