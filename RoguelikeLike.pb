@@ -11,7 +11,7 @@ Structure TMonster : *Tile.TTile : Sprite.u : Hp.f : MonsterType.a : Dead.a : Do
   List Spells.b() : Array LastMove.b(1) : BonusAttack.a
 EndStructure
 Enumeration SpellTypes : #SpellWoop : #SpellQuake : #SpellMaelstrom : #SpellMulligan : #SpellAura : #SpellDash
-#SpellDig : #SpellKingMaker : #SpellAlchemy : #SpellPower : EndEnumeration
+#SpellDig : #SpellKingMaker : #SpellAlchemy : #SpellPower : #SpellBubble : EndEnumeration
 Enumeration GameResources : #SpriteSheet : #TitleBackground : #Bitmap_Font_Sprite : #SoundHit1
 #SoundHit2 : #SoundTreasure : #SoundNewLevel : #SoundSpell : EndEnumeration
 Enumeration GameSprites
@@ -462,6 +462,14 @@ Procedure AlchemySpell(*Caster.TMonster) : NewList AdjacentNeighbors.i()
   Next
 EndProcedure
 Procedure PowerSpell(*Caster.TMonster) : *Caster\BonusAttack = 5 : EndProcedure
+Procedure BubbleSpell(*Caster.TMonster)
+  For i.a = ListSize(*Caster\Spells()) - 1 To 1 Step -1
+    If SelectElement(*Caster\Spells(), i) And *Caster\Spells() = #No_Spell
+      *CurrentSpell.Byte = @*Caster\Spells() : SelectElement(*Caster\Spells(), i - 1)
+      *CurrentSpell\b = *Caster\Spells() : ChangeCurrentElement(*Caster\Spells(), *CurrentSpell)
+    EndIf
+  Next
+EndProcedure
 Procedure InitSpells()
   Spells(#SpellWoop) = @WoopSpell() : SpellNames(Str(#SpellWoop)) = "WOOP"
   Spells(#SpellQuake) = @QuakeSpell() : SpellNames(Str(#SpellQuake)) = "QUAKE"
@@ -473,12 +481,13 @@ Procedure InitSpells()
   Spells(#SpellKingMaker) = @KingMakerSpell() : SpellNames(Str(#SpellKingMaker)) = "KINGMAKER"
   Spells(#SpellAlchemy) = @AlchemySpell() : SpellNames(Str(#SpellAlchemy)) = "ALCHEMY"
   Spells(#SpellPower) = @PowerSpell() : SpellNames(Str(#SpellPower)) = "POWER"
-  MaxSpellIndex = #SpellPower
+  Spells(#SpellBubble) = @BubbleSpell() : SpellNames(Str(#SpellBubble)) = "BUBBLE"
+  MaxSpellIndex = #SpellBubble
 EndProcedure
 Procedure CastMonsterSpell(*Monster.TMonster, Index.a);call this procedure to cast a spell
   If SelectElement(*Monster\Spells(), Index) And *Monster\Spells() <> #No_Spell
-    SpellProcedure.SpellProc = Spells(*Monster\Spells()) : SpellProcedure(*Monster)
-    *Monster\Spells() = #No_Spell : PlaySoundEffect(#SoundSpell) : Tick()
+    SpellNum.b = *Monster\Spells() : *Monster\Spells() = #No_Spell
+    SpellProcedure.SpellProc = Spells(SpellNum) : SpellProcedure(*Monster) : PlaySoundEffect(#SoundSpell) : Tick()
   EndIf
 EndProcedure
 Procedure DrawTile(*Tile.TTile)
