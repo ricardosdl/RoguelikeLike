@@ -11,7 +11,7 @@ Structure TMonster : *Tile.TTile : Sprite.u : Hp.f : MonsterType.a : Dead.a : Do
   List Spells.b() : Array LastMove.b(1)
 EndStructure
 Enumeration SpellTypes : #SpellWoop : #SpellQuake : #SpellMaelstrom : #SpellMulligan : #SpellAura : #SpellDash
-#SpellDig: EndEnumeration
+#SpellDig : #SpellKingMaker: EndEnumeration
 Enumeration GameResources : #SpriteSheet : #TitleBackground : #Bitmap_Font_Sprite : #SoundHit1
 #SoundHit2 : #SoundTreasure : #SoundNewLevel : #SoundSpell : EndEnumeration
 Enumeration GameSprites
@@ -450,6 +450,9 @@ Procedure DigSpell(*Caster.TMonster)
   Next i
   SetTileEffect(*Caster\Tile, #SpriteHeal) : HealMonsterEater(*Caster, 2)
 EndProcedure
+Procedure KingMakerSpell(*Caster.TMonster)
+  ForEach Monsters() : HealMonsterEater(@Monsters(), 1) : Monsters()\Tile\HasTreasure = #True : Next
+EndProcedure
 Procedure InitSpells()
   Spells(#SpellWoop) = @WoopSpell() : SpellNames(Str(#SpellWoop)) = "WOOP"
   Spells(#SpellQuake) = @QuakeSpell() : SpellNames(Str(#SpellQuake)) = "QUAKE"
@@ -458,7 +461,8 @@ Procedure InitSpells()
   Spells(#SpellAura) = @AuraSpell() : SpellNames(Str(#SpellAura)) = "AURA"
   Spells(#SpellDash) = @DashSpell() : SpellNames(Str(#SpellDash)) = "DASH"
   Spells(#SpellDig) = @DigSpell() : SpellNames(Str(#SpellDig)) = "DIG"
-  MaxSpellIndex = #SpellDig
+  Spells(#SpellKingMaker) = @KingMakerSpell() : SpellNames(Str(#SpellKingMaker)) = "KINGMAKER"
+  MaxSpellIndex = #SpellKingMaker
 EndProcedure
 Procedure CastMonsterSpell(*Monster.TMonster, Index.a);call this procedure to cast a spell
   If SelectElement(*Monster\Spells(), Index) And *Monster\Spells() <> #No_Spell
