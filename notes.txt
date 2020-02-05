@@ -1,2 +1,4 @@
 ﻿====Resources used
 https://opengameart.org/content/loveable-rogue
+==max lines on win-64
+782
