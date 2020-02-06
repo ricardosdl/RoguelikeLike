@@ -11,7 +11,8 @@ Structure TMonster : *Tile.TTile : Sprite.u : Hp.f : MonsterType.a : Dead.a : Do
   List Spells.b() : Array LastMove.b(1) : BonusAttack.a : Shield.b
 EndStructure
 Enumeration SpellTypes : #SpellWoop : #SpellQuake : #SpellMaelstrom : #SpellMulligan : #SpellAura : #SpellDash
-#SpellDig : #SpellKingMaker : #SpellAlchemy : #SpellPower : #SpellBubble : #SpellBravery : #SpellBolt : #SpellCross : #SpellEx : EndEnumeration
+#SpellDig : #SpellKingMaker : #SpellAlchemy : #SpellPower : #SpellBubble : #SpellBravery : #SpellBolt
+#SpellCross : #SpellEx : #SpellVampire : EndEnumeration
 Enumeration GameResources : #SpriteSheet : #TitleBackground : #Bitmap_Font_Sprite : #SoundHit1
 #SoundHit2 : #SoundTreasure : #SoundNewLevel : #SoundSpell : EndEnumeration
 Enumeration GameSprites
@@ -24,7 +25,7 @@ Prototype.a CallBackProc();our callback prototype
 Global NumPlayerSpells.a, MaxSpellIndex.a : #No_Spell = -1
 Global TileSize.a = 64, NumTiles.a = 9, UIWidth.u = 4, GameWidth.u = TileSize * (NumTiles + UIWidth), GameHeight.u = TileSize * NumTiles,ExitGame.a = #False, SoundMuted.a = #False
 Global BasePath.s = "data" + #PS$, ElapsedTimneInS.f, LastTimeInMs.q, SoundInitiated.i = #False
-Global Dim Tiles.TTile(NumTiles - 1, NumTiles - 1), *RandomPassableTile.TTile, MaxSpells.a = 15, Dim Spells.i(MaxSpells - 1), NewMap SpellNames.s()
+Global Dim Tiles.TTile(NumTiles - 1, NumTiles - 1), *RandomPassableTile.TTile, MaxSpells.a = 16, Dim Spells.i(MaxSpells - 1), NewMap SpellNames.s()
 Global Level.a, Player.TMonster, NewList Monsters.TMonster(), MaxHp.a = 6, GameState.s = "loading", StartingHp.a = 3, NumLevels.a = 6
 Global SpawnCounter.w, SpawnRate.w, Score.a, NewList Scores.TScore(), ShakeAmount.a = 0, ShakeX.f = 0.0, ShakeY.f = 0.0
 Declare PlaySoundEffect(Sound.a) : Declare.i SpawnMonster() : Declare GenerateMonsters() : Declare ReplaceTile(NewTileType.a, x.w, y.w)
@@ -502,6 +503,15 @@ Procedure ExSpell(*Caster.TMonster)
     BoltTravel(*Caster, Direction(), #SpriteExplosion, 3)
   Next
 EndProcedure
+Procedure VampireSpell(*Caster.TMonster)
+  NewList AdjacentNeighbors.i() : GetTileAdjacentNeighbors(*Caster\Tile, AdjacentNeighbors())
+  ForEach AdjacentNeighbors() : *CurrrentTile.TTile = AdjacentNeighbors()
+    If *CurrrentTile\Monster <> #Null
+      HitMonster(*CurrrentTile\Monster, 1) : HealMonsterEater(*Caster, 1) : SetTileEffect(*CurrrentTile, #SpriteExplosion)
+    EndIf
+  Next
+  SetTileEffect(*Caster\Tile, #SpriteHeal)
+EndProcedure
 Procedure InitSpells()
   Spells(#SpellWoop) = @WoopSpell() : SpellNames(Str(#SpellWoop)) = "WOOP"
   Spells(#SpellQuake) = @QuakeSpell() : SpellNames(Str(#SpellQuake)) = "QUAKE"
@@ -519,7 +529,8 @@ Procedure InitSpells()
   Spells(#SpellCross) = @CrossSpell() : SpellNames(Str(#SpellCross)) = "CROSS"
   Spells(#SpellCross) = @CrossSpell() : SpellNames(Str(#SpellCross)) = "CROSS"
   Spells(#SpellEx) = @ExSpell() : SpellNames(Str(#SpellEx)) = "EX"
-  MaxSpellIndex = #SpellEx
+  Spells(#SpellVampire) = @VampireSpell() : SpellNames(Str(#SpellVampire)) = "VAMPIRE"
+  MaxSpellIndex = #SpellVampire
 EndProcedure
 Procedure CastMonsterSpell(*Monster.TMonster, Index.a);call this procedure to cast a spell
   If SelectElement(*Monster\Spells(), Index) And *Monster\Spells() <> #No_Spell
