@@ -62,8 +62,8 @@ Procedure DrawSprite(SpriteIndex.u, x.f, y.f, Intensity.a = 255)
 EndProcedure
 Procedure DrawBitmapText(x.f, y.f, Text.s, CharWidthPx.a = 16, CharHeightPx.a = 24);draw text is too slow on linux, let's try to use bitmap fonts
   ClipSprite(#Bitmap_Font_Sprite, #PB_Default, #PB_Default, #PB_Default, #PB_Default)
-  ZoomSprite(#Bitmap_Font_Sprite, #PB_Default, #PB_Default)
-  For i.i = 1 To Len(Text);loop the string Text char by char
+  ZoomSprite(#Bitmap_Font_Sprite, #PB_Default, #PB_Default) : LenText = Len(Text)
+  For i.i = 1 To LenText;loop the string Text char by char
     AsciiValue.a = Asc(Mid(Text, i, 1))
     ClipSprite(#Bitmap_Font_Sprite, (AsciiValue - 32) % 16 * 8, (AsciiValue - 32) / 16 * 12, 8, 12)
     ZoomSprite(#Bitmap_Font_Sprite, CharWidthPx, CharHeightPx)
