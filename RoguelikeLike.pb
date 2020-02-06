@@ -612,9 +612,7 @@ EndProcedure
 Procedure LoadingError(Type, Filename$)
   Debug Filename$ + ": loading error"
 EndProcedure
-CompilerIf #PB_Compiler_Processor <> #PB_Processor_JavaScript
-  UsePNGImageDecoder()
-CompilerEndIf
+CompilerIf #PB_Compiler_Processor <> #PB_Processor_JavaScript : UsePNGImageDecoder() : CompilerEndIf
 SoundInitiated = InitSound()
 CompilerIf #PB_Compiler_Processor = #PB_Processor_JavaScript
   BindEvent(#PB_Event_Loading, @Loading()) : BindEvent(#PB_Event_LoadingError, @LoadingError())
