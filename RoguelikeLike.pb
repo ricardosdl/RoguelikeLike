@@ -86,7 +86,7 @@ Procedure DrawScores()
   If ListSize(TheScores()) > 0 : Header.s = RightPad("RUN|SCORE|TOTAL")
     DrawBitmapText((GameWidth - Len(Header) * 16) / 2, GameHeight / 2 + 20, Header)
     LastElement(TheScores()) : NewestScore.TScore = TheScores() : DeleteElement(TheScores(), #True)
-    SortStructuredList(TheScores(), #PB_Sort_Ascending, OffsetOf(TScore\TotalScore), TypeOf(TScore\TotalScore))
+    ;SortStructuredList(TheScores(), #PB_Sort_Ascending, OffsetOf(TScore\TotalScore), TypeOf(TScore\TotalScore))
     LastElement(TheScores()) : AddElement(TheScores()) : TheScores() = NewestScore : i.u = 0
     ForEach TheScores()
       ScoreText.s = RightPad(Str(TheScores()\Run) + "|" + Str(TheScores()\Score) + "|" + Str(TheScores()\TotalScore))
@@ -146,7 +146,7 @@ Procedure TryTo(Description.s, Callback.CallbackProc)
   For i.u = 1000 To 1 Step -1
     If Callback() : ProcedureReturn : EndIf
   Next i
-  RaiseError(#PB_OnError_IllegalInstruction)
+  ;RaiseError(#PB_OnError_IllegalInstruction)
 EndProcedure
 Procedure.i RandomPassableTile()
   TryTo("get random passable tile", @GetRandomPassableTile())
@@ -582,15 +582,15 @@ Procedure UpdateKeyBoard(Elapsed.f)
     If KeyboardReleased(#PB_Key_A) : TryPlayerMonsterMove(@Player, -1, 0) : EndIf
     If KeyboardReleased(#PB_Key_D) : TryPlayerMonsterMove(@Player, 1, 0) : EndIf
     
-    If KeyboardReleased(#PB_Key_1) : CastMonsterSpell(@Player, #PB_Key_1 - 2)  
-    ElseIf KeyboardReleased(#PB_Key_2) : CastMonsterSpell(@Player, #PB_Key_2 - 2)  
-    ElseIf KeyboardReleased(#PB_Key_3) : CastMonsterSpell(@Player, #PB_Key_3 - 2)  
-    ElseIf KeyboardReleased(#PB_Key_4) : CastMonsterSpell(@Player, #PB_Key_4 - 2)  
-    ElseIf KeyboardReleased(#PB_Key_5) : CastMonsterSpell(@Player, #PB_Key_5 - 2)  
-    ElseIf KeyboardReleased(#PB_Key_6) : CastMonsterSpell(@Player, #PB_Key_6 - 2)  
-    ElseIf KeyboardReleased(#PB_Key_7) : CastMonsterSpell(@Player, #PB_Key_7 - 2)  
-    ElseIf KeyboardReleased(#PB_Key_8) : CastMonsterSpell(@Player, #PB_Key_8 - 2)  
-    ElseIf KeyboardReleased(#PB_Key_9) : CastMonsterSpell(@Player, #PB_Key_9 - 2)
+    If KeyboardReleased(#PB_Key_1) : CastMonsterSpell(@Player, 0)  
+    ElseIf KeyboardReleased(#PB_Key_2) : CastMonsterSpell(@Player, 1)  
+    ElseIf KeyboardReleased(#PB_Key_3) : CastMonsterSpell(@Player, 2)  
+    ElseIf KeyboardReleased(#PB_Key_4) : CastMonsterSpell(@Player, 3)  
+    ElseIf KeyboardReleased(#PB_Key_5) : CastMonsterSpell(@Player, 4)  
+    ElseIf KeyboardReleased(#PB_Key_6) : CastMonsterSpell(@Player, 5)  
+    ElseIf KeyboardReleased(#PB_Key_7) : CastMonsterSpell(@Player, 6)  
+    ElseIf KeyboardReleased(#PB_Key_8) : CastMonsterSpell(@Player, 7)  
+    ElseIf KeyboardReleased(#PB_Key_9) : CastMonsterSpell(@Player, 8)
     EndIf
   EndIf
 EndProcedure
@@ -605,7 +605,7 @@ EndIf
 Procedure Loading()
   Static LoadedElements.a
   LoadedElements + 1
-  If LoadedElements = 10
+  If LoadedElements = 8
     StartGame()
   EndIf
 EndProcedure
