@@ -87,13 +87,14 @@ Procedure DrawScores()
     DrawBitmapText((GameWidth - Len(Header) * 16) / 2, GameHeight / 2 + 20, Header)
     LastElement(TheScores()) : NewestScore.TScore = TheScores() : DeleteElement(TheScores(), #True)
     SortStructuredList(TheScores(), #PB_Sort_Descending, OffsetOf(TScore\TotalScore), TypeOf(TScore\TotalScore))
-    LastElement(TheScores()) : AddElement(TheScores()) : TheScores() = NewestScore : i.u = 0
+    ResetList(TheScores()) : AddElement(TheScores()) : TheScores() = NewestScore : i.u = 0
     ForEach TheScores()
       ScoreText.s = RightPad(Str(TheScores()\Run) + "|" + Str(TheScores()\Score) + "|" + Str(TheScores()\TotalScore))
       DrawBitmapText((GameWidth - Len(ScoreText) * 16) / 2, GameHeight / 2 + 40 + 24 + i * 24, ScoreText)
       i + 1
     Next
   EndIf
+  ClearList(Scores()) : CopyList(TheScores(), Scores())
 EndProcedure
 Procedure ShowTitle()
   DisplayTransparentSprite(#TitleBackground, 0, 0)
