@@ -53,6 +53,7 @@ Procedure AddScore(Score.a, Won.a)
   ClearList(Scores()) : CopyList(TheScores(), Scores())
 EndProcedure
 Procedure LoadSprites()
+  SpriteQuality(#PB_Sprite_NoFiltering)
   LoadSprite(#SpriteSheet, BasePath + "graphics" + #PS$ + "spritesheet.png", #PB_Sprite_AlphaBlending)
   LoadSprite(#TitleBackground, BasePath + "graphics" + #PS$ + "title-background.png", #PB_Sprite_AlphaBlending)
   LoadSprite(#Bitmap_Font_Sprite, BasePath + "graphics" + #PS$ + "font.png", #PB_Sprite_AlphaBlending)
