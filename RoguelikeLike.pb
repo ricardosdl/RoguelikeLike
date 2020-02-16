@@ -565,10 +565,6 @@ Procedure LoadSounds()
   EndIf
 EndProcedure
 Procedure StartGame()
-  CompilerIf #PB_Compiler_Processor = #PB_Processor_JavaScript
-    BindEvent(#PB_Event_RenderFrame, @RenderFrame())
-    FlipBuffers()
-  CompilerEndIf
   Level = 1 : Score = 0 : NumPlayerSpells = 9 : StartLevel(StartingHp) : GameState = "running"
 EndProcedure
 Procedure UpdateKeyBoard(Elapsed.f)
@@ -607,7 +603,7 @@ Procedure Loading()
   Static LoadedElements.a
   LoadedElements + 1
   If LoadedElements = 8
-    StartGame()
+    ShowTitle() : FlipBuffers()
   EndIf
 EndProcedure
 Procedure LoadingError(Type, Filename$)
@@ -617,6 +613,7 @@ CompilerIf #PB_Compiler_Processor <> #PB_Processor_JavaScript : UsePNGImageDecod
 SoundInitiated = InitSound()
 CompilerIf #PB_Compiler_Processor = #PB_Processor_JavaScript
   BindEvent(#PB_Event_Loading, @Loading()) : BindEvent(#PB_Event_LoadingError, @LoadingError())
+  BindEvent(#PB_Event_RenderFrame, @RenderFrame())
 CompilerEndIf
 Procedure.f GetMonsterDisplayXY(*Monster.TMonster, IsItX.a)
   If IsItX : ProcedureReturn *Monster\Tile\x + *Monster\OffsetX
@@ -678,7 +675,7 @@ Procedure RenderFrame()
           ExitGame = #True
       EndSelect
     Until Event = 0 ; Quit the event loop only when no more events are available
-  CompilerEndIf  
+  CompilerEndIf
   ExamineKeyboard() : UpdateKeyBoard(ElapsedTimneInS) : Draw()
   LastTimeInMs = ElapsedMilliseconds()
   FlipBuffers()
