@@ -568,7 +568,7 @@ Procedure StartGame()
   Level = 1 : Score = 0 : NumPlayerSpells = 9 : StartLevel(StartingHp) : GameState = "running"
 EndProcedure
 Procedure UpdateKeyBoard(Elapsed.f)
-  If (GameState = "title" Or GameState = "dead") And KeyboardReleased(#PB_Key_All)
+  If (GameState = "title" Or GameState = "dead") And (KeyboardReleased(#PB_Key_Space) Or KeyboardReleased(#PB_Key_All))
     If GameState = "title" : StartGame()
     ElseIf GameState = "dead" : ShowTitle()
     EndIf
