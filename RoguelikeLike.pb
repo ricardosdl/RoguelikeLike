@@ -22,7 +22,7 @@ Enumeration GameSprites
 EndEnumeration
 Structure TScore : Score.u : Run.u : TotalScore.l : Active.a : EndStructure
 Prototype.a CallBackProc();our callback prototype
-Global NumPlayerSpells.a, MaxSpellIndex.a : #No_Spell = -1
+Global NumPlayerSpells.a, MaxSpellIndex.a, LevelStarted.a = #False : #No_Spell = -1
 Global TileSize.a = 64, NumTiles.a = 9, UIWidth.u = 4, GameWidth.u = TileSize * (NumTiles + UIWidth), GameHeight.u = TileSize * NumTiles,ExitGame.a = #False, SoundMuted.a = #False
 Global BasePath.s = "data" + #PS$, ElapsedTimneInS.f, LastTimeInMs.q, SoundInitiated.i = #False
 Global Dim Tiles.TTile(NumTiles - 1, NumTiles - 1), *RandomPassableTile.TTile, MaxSpells.a = 17, Dim Spells.i(MaxSpells - 1), NewMap SpellNames.s()
@@ -218,7 +218,7 @@ Procedure AddMonsterSpell(*Monster.TMonster)
   AddElement(*Monster\Spells()) : *Monster\Spells() = GetRandomSpell()
 EndProcedure
 Procedure StartLevel(StartingHp.a, KeepPlayerSpells.a = #False)
-  SpawnRate = 15 : SpawnCounter = SpawnRate : GenerateLevel()
+  SpawnRate = 15 : SpawnCounter = SpawnRate : GenerateLevel() : LevelStarted = #True
   *RandomPassableTile.TTile = RandomPassableTile()
   If Not KeepPlayerSpells
     InitPlayer(@Player, *RandomPassableTile, #SpritePlayer, StartingHp)
@@ -639,7 +639,7 @@ Procedure ScreenShake()
   ShakeY = Round(Sin(ShakeAngle) * ShakeAmount, #PB_Round_Nearest)
 EndProcedure
 Procedure Draw()
-  If GameState = "running" Or GameState = "dead"
+  If LevelStarted
     ClearScreen(RGB(0,0,0))
     ScreenShake()
     For i.b = 0 To NumTiles - 1
@@ -660,6 +660,9 @@ Procedure Draw()
       SpellText.s = Str(i + 1) + ")" + SpellName
       DrawBitmapText(GameWidth - UIWidth * TileSize + 25, 110 + i * 40, SpellText)
     Next
+  EndIf
+  If GameState = "title"
+    ShowTitle()
   EndIf
 EndProcedure
 Procedure RenderFrame()
