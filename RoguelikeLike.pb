@@ -565,7 +565,7 @@ Procedure LoadSounds()
   EndIf
 EndProcedure
 Procedure StartGame()
-  Level = 1 : Score = 0 : NumPlayerSpells = 9 : StartLevel(StartingHp) : GameState = "running"
+  Level = 1 : Score = 0 : NumPlayerSpells = 1 : StartLevel(StartingHp) : GameState = "running"
 EndProcedure
 Procedure UpdateKeyBoard()
   If (GameState = "title" Or GameState = "dead") And (KeyboardReleased(#PB_Key_Space) Or KeyboardReleased(#PB_Key_All))
@@ -631,7 +631,6 @@ Procedure DrawMonster(*Monster.TMonster)
     Next
   EndIf
   *Monster\OffsetX - Sign(*Monster\OffsetX) * (1 / 8) : *Monster\OffsetY - Sign(*Monster\OffsetY) * (1 / 8)
-  
 EndProcedure
 Procedure ScreenShake()
   If ShakeAmount : ShakeAmount - 1 : EndIf : ShakeAngle = Random(999, 0) / 1000.0 * #PI * 2
@@ -699,8 +698,8 @@ If OpenWindow(0, 0, 0, GameWidth, GameHeight, "RoguelikeLike", #PB_Window_System
   EndIf
 EndIf
 ; IDE Options = SpiderBasic 2.30 (Windows - x86)
-; CursorPosition = 678
-; FirstLine = 674
+; CursorPosition = 567
+; FirstLine = 560
 ; Folding = ---------------
 ; Markers = 571
 ; iOSAppOrientation = 0
