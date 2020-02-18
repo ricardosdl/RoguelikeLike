@@ -567,7 +567,7 @@ EndProcedure
 Procedure StartGame()
   Level = 1 : Score = 0 : NumPlayerSpells = 9 : StartLevel(StartingHp) : GameState = "running"
 EndProcedure
-Procedure UpdateKeyBoard(Elapsed.f)
+Procedure UpdateKeyBoard()
   If (GameState = "title" Or GameState = "dead") And (KeyboardReleased(#PB_Key_Space) Or KeyboardReleased(#PB_Key_All))
     If GameState = "title" : StartGame()
     ElseIf GameState = "dead" : ShowTitle()
@@ -676,7 +676,7 @@ Procedure RenderFrame()
       EndSelect
     Until Event = 0 ; Quit the event loop only when no more events are available
   CompilerEndIf
-  ExamineKeyboard() : UpdateKeyBoard(ElapsedTimneInS) : Draw()
+  ExamineKeyboard() : UpdateKeyBoard() : Draw()
   LastTimeInMs = ElapsedMilliseconds()
   FlipBuffers()
 EndProcedure
