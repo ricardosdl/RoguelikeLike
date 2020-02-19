@@ -697,12 +697,3 @@ If OpenWindow(0, 0, 0, GameWidth, GameHeight, "RoguelikeLike", #PB_Window_System
     CompilerEndIf
   EndIf
 EndIf
-; IDE Options = SpiderBasic 2.30 (Windows - x86)
-; CursorPosition = 567
-; FirstLine = 560
-; Folding = ---------------
-; Markers = 571
-; iOSAppOrientation = 0
-; AndroidAppOrientation = 0
-; EnableXP
-; CompileSourceDirectory
