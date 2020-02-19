@@ -85,13 +85,13 @@ EndProcedure
 Procedure DrawScores()
   NewList TheScores.TScore() : GetScores(TheScores())
   If ListSize(TheScores()) > 0 : Header.s = RightPad("RUN|SCORE|TOTAL")
-    DrawBitmapText((GameWidth - Len(Header) * 16) / 2, GameHeight / 2 + 20, Header)
+    DrawBitmapText((GameWidth - Len(Header) * 16) / 2, GameHeight / 2 + 30, Header)
     LastElement(TheScores()) : NewestScore.TScore = TheScores() : DeleteElement(TheScores(), #True)
     ;SortStructuredList(TheScores(), #PB_Sort_Ascending, OffsetOf(TScore\TotalScore), TypeOf(TScore\TotalScore))
     LastElement(TheScores()) : AddElement(TheScores()) : TheScores() = NewestScore : i.u = 0
     ForEach TheScores()
       ScoreText.s = RightPad(Str(TheScores()\Run) + "|" + Str(TheScores()\Score) + "|" + Str(TheScores()\TotalScore))
-      DrawBitmapText((GameWidth - Len(ScoreText) * 16) / 2, GameHeight / 2 + 40 + 24 + i * 24, ScoreText)
+      DrawBitmapText((GameWidth - Len(ScoreText) * 16) / 2, GameHeight / 2 + 40 + 34 + i * 24, ScoreText)
       i + 1
     Next
   EndIf
@@ -102,6 +102,9 @@ Procedure ShowTitle()
   DrawBitmapText(TitleX, TitleY, "Roguelike", 32, 48)
   TitleX = (GameWidth - Len("Like") * 48) / 2 : TitleY = (GameHeight / 2 - 50)
   DrawBitmapText(TitleX, TitleY, "Like", 48, 72)
+  CompilerIf #PB_Compiler_Processor = #PB_Processor_JavaScript
+    DrawBitmapText(TitleX, TitleY + 24 + 32, "Press Space to start", 16, 24)
+  CompilerEndIf
   DrawScores()
 EndProcedure
 Procedure.a InBounds(x.w, y.w)
