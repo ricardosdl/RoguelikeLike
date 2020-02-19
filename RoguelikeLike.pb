@@ -387,7 +387,7 @@ Procedure Tick()
     EndIf
   Next
   Player\Update(@Player)
-  If Player\Dead : AddScore(Score, #False) : GameState = "dead" : EndIf
+  If Player\Dead : AddScore(Score, #False) : GameState = "dead" : ShowTitle() : EndIf
   SpawnCounter - 1
   If SpawnCounter <= 0
     SpawnMonster() : SpawnCounter = SpawnRate : SpawnRate - 1
