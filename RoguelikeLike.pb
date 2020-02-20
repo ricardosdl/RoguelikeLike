@@ -95,7 +95,6 @@ Procedure SortScores(List Scores.TScore()) : If ListSize(Scores()) <= 1 : Proced
     If Not Added : SortedScores(k - 1) = Scores() : EndIf
     i + 1
   Next Scores()
-  SwapElements
   ClearList(Scores()) : SizeSortedArray.a = ArraySize(SortedScores())
   For i = 0 To SizeSortedArray : AddElement(Scores()) : Scores() = SortedScores(i) : Next
 EndProcedure
