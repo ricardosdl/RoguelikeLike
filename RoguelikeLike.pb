@@ -82,13 +82,30 @@ Procedure.s RightPad(TextList.s)
   Next
   ProcedureReturn FinalText
 EndProcedure
+Procedure SortScores(List Scores.TScore()) : If ListSize(Scores()) <= 1 : ProcedureReturn : EndIf
+  Define i.a = 0, j.a, k.a : SelectElement(Scores(), 0) : Dim SortedScores.TScore(ListSize(Scores()) - 1)
+  SortedScores(i) = Scores() : i + 1 : DeleteElement(Scores(), #True)
+  ForEach Scores()
+    For k = 0 To i : Added.a = #False
+      If Scores()\TotalScore > SortedScores(k)\TotalScore
+        For j = i To k + 1 Step -1 : SortedScores(j) = SortedScores(j - 1) : Next j
+        SortedScores(k) = Scores() : Added = #True : Break
+      EndIf
+    Next k
+    If Not Added : SortedScores(k - 1) = Scores() : EndIf
+    i + 1
+  Next Scores()
+  SwapElements
+  ClearList(Scores()) : SizeSortedArray.a = ArraySize(SortedScores())
+  For i = 0 To SizeSortedArray : AddElement(Scores()) : Scores() = SortedScores(i) : Next
+EndProcedure
 Procedure DrawScores()
   NewList TheScores.TScore() : GetScores(TheScores())
   If ListSize(TheScores()) > 0 : Header.s = RightPad("RUN|SCORE|TOTAL")
     DrawBitmapText((GameWidth - Len(Header) * 16) / 2, GameHeight / 2 + 30, Header)
     LastElement(TheScores()) : NewestScore.TScore = TheScores() : DeleteElement(TheScores(), #True)
-    ;SortStructuredList(TheScores(), #PB_Sort_Ascending, OffsetOf(TScore\TotalScore), TypeOf(TScore\TotalScore))
-    LastElement(TheScores()) : AddElement(TheScores()) : TheScores() = NewestScore : i.u = 0
+    SortScores(TheScores())
+    ResetList(TheScores()) : AddElement(TheScores()) : TheScores() = NewestScore : i.u = 0
     ForEach TheScores()
       ScoreText.s = RightPad(Str(TheScores()\Run) + "|" + Str(TheScores()\Score) + "|" + Str(TheScores()\TotalScore))
       DrawBitmapText((GameWidth - Len(ScoreText) * 16) / 2, GameHeight / 2 + 40 + 34 + i * 24, ScoreText)
