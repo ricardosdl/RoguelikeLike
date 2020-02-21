@@ -563,9 +563,7 @@ Procedure DrawTile(*Tile.TTile)
   EndIf
 EndProcedure
 Procedure PlaySoundEffect(Sound.a)
-  If SoundInitiated
-    PlaySound(Sound)
-  EndIf
+  If SoundInitiated : PlaySound(Sound) : EndIf
 EndProcedure
 Procedure LoadSounds()
   If SoundInitiated : SoundPath.s = BasePath + "sounds" + #PS$
