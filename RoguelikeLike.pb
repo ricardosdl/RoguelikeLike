@@ -43,8 +43,7 @@ Procedure AddScore(Score.a, Won.a)
   If Not IsEmpty
     LastScore.TScore = TheScores() : DeleteElement(TheScores(), #True)
     If LastScore\Active
-      NewScore\Run = LastScore\Run + 1
-      NewScore\TotalScore + LastScore\TotalScore
+      NewScore\Run = LastScore\Run + 1 : NewScore\TotalScore + LastScore\TotalScore
     Else
       AddElement(TheScores()) : TheScores() = LastScore
     EndIf
@@ -82,29 +81,22 @@ Procedure.s RightPad(TextList.s)
   Next
   ProcedureReturn FinalText
 EndProcedure
-Procedure SortScores(List Scores.TScore()) : If ListSize(Scores()) <= 1 : ProcedureReturn : EndIf
-  Define i.a = 0, j.a, k.a : SelectElement(Scores(), 0) : Dim SortedScores.TScore(ListSize(Scores()) - 1)
-  SortedScores(i) = Scores() : i + 1 : DeleteElement(Scores(), #True)
-  ForEach Scores()
-    For k = 0 To i : Added.a = #False
-      If Scores()\TotalScore > SortedScores(k)\TotalScore
-        For j = i To k + 1 Step -1 : SortedScores(j) = SortedScores(j - 1) : Next j
-        SortedScores(k) = Scores() : Added = #True : Break
+Procedure SortScores(List Scores.TScore()) : Define i.w, j.w, ScoresSize.w = ListSize(Scores())
+  For i = 0 To ScoresSize - 2
+    For j = 0 To ScoresSize - i  - 2 : *First.TScore = SelectElement(Scores(), j) : *Second.TScore = SelectElement(Scores(), j + 1)
+      If *First\TotalScore < *Second\TotalScore
+        SwapElements(Scores(), *First, *Second)
       EndIf
-    Next k
-    If Not Added : SortedScores(k - 1) = Scores() : EndIf
-    i + 1
-  Next Scores()
-  ClearList(Scores()) : SizeSortedArray.a = ArraySize(SortedScores())
-  For i = 0 To SizeSortedArray : AddElement(Scores()) : Scores() = SortedScores(i) : Next
+    Next j
+  Next i
 EndProcedure
 Procedure DrawScores()
   NewList TheScores.TScore() : GetScores(TheScores())
   If ListSize(TheScores()) > 0 : Header.s = RightPad("RUN|SCORE|TOTAL")
     DrawBitmapText((GameWidth - Len(Header) * 16) / 2, GameHeight / 2 + 30, Header)
     LastElement(TheScores()) : NewestScore.TScore = TheScores() : DeleteElement(TheScores(), #True)
-    SortScores(TheScores())
-    ResetList(TheScores()) : AddElement(TheScores()) : TheScores() = NewestScore : i.u = 0
+    SortScores(TheScores()) : ResetList(TheScores()) : AddElement(TheScores()) : i.u = 0
+    TheScores()\Active = NewestScore\Active : TheScores()\Run = NewestScore\Run : TheScores()\Score = NewestScore\Score : TheScores()\TotalScore = NewestScore\TotalScore
     ForEach TheScores()
       ScoreText.s = RightPad(Str(TheScores()\Run) + "|" + Str(TheScores()\Score) + "|" + Str(TheScores()\TotalScore))
       DrawBitmapText((GameWidth - Len(ScoreText) * 16) / 2, GameHeight / 2 + 40 + 34 + i * 24, ScoreText)
@@ -166,7 +158,6 @@ Procedure TryTo(Description.s, Callback.CallbackProc)
   For i.u = 1000 To 1 Step -1
     If Callback() : ProcedureReturn : EndIf
   Next i
-  ;RaiseError(#PB_OnError_IllegalInstruction)
 EndProcedure
 Procedure.i RandomPassableTile()
   TryTo("get random passable tile", @GetRandomPassableTile())
