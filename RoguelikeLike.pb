@@ -653,11 +653,8 @@ Procedure Draw()
     ScreenShake()
     For i.b = 0 To NumTiles - 1
       For j.b = 0 To NumTiles - 1
-        *Tile.TTile = GetTile(i, j)
-        If *Tile = #Null : Continue;the tile is out of the visible screen
-        Else
-          DrawTile(*Tile)
-        EndIf
+        If GetTile(i, j) = #Null : Continue;the tile is out of the visible screen
+        Else : DrawTile(GetTile(i, j)) : EndIf
       Next j
     Next i
     ForEach Monsters() : DrawMonster(@Monsters()) : Next
