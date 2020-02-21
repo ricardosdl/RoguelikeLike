@@ -588,7 +588,6 @@ Procedure UpdateKeyBoard()
     If KeyboardReleased(#PB_Key_S) : TryPlayerMonsterMove(@Player, 0, 1) : EndIf
     If KeyboardReleased(#PB_Key_A) : TryPlayerMonsterMove(@Player, -1, 0) : EndIf
     If KeyboardReleased(#PB_Key_D) : TryPlayerMonsterMove(@Player, 1, 0) : EndIf
-    
     If KeyboardReleased(#PB_Key_1) : CastMonsterSpell(@Player, 0)  
     ElseIf KeyboardReleased(#PB_Key_2) : CastMonsterSpell(@Player, 1)  
     ElseIf KeyboardReleased(#PB_Key_3) : CastMonsterSpell(@Player, 2)  
