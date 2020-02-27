@@ -518,7 +518,7 @@ Procedure VampireSpell(*Caster.TMonster)
   NewList AdjacentNeighbors.i() : GetTileAdjacentNeighbors(*Caster\Tile, AdjacentNeighbors())
   ForEach AdjacentNeighbors() : *CurrrentTile.TTile = AdjacentNeighbors()
     If *CurrrentTile\Monster <> #Null
-      HitMonster(*CurrrentTile\Monster, 1) : HealMonsterEater(*Caster, 1) : SetTileEffect(*CurrrentTile, #SpriteExplosion)
+      *CurrrentTile\Monster\Stunned = #True : HitMonster(*CurrrentTile\Monster, 1) : HealMonsterEater(*Caster, 1) : SetTileEffect(*CurrrentTile, #SpriteExplosion)
     EndIf
   Next
   SetTileEffect(*Caster\Tile, #SpriteHeal)
