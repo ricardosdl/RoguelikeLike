@@ -387,7 +387,7 @@ Procedure DoJesterStuff(*Jester.TMonster)
 EndProcedure
 Procedure Tick()
   ForEach Monsters()
-    If Monsters()\hp > 0
+    If Monsters()\hp > 0 And GameState = "running"
       Monsters()\Update(@Monsters())
     Else
       DeleteElement(Monsters())
