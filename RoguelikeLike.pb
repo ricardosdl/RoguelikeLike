@@ -543,7 +543,6 @@ Procedure InitSpells()
   Spells(#SpellBravery) = @BraverySpell() : SpellNames(Str(#SpellBravery)) = "BRAVERY"
   Spells(#SpellBolt) = @BoltSpell() : SpellNames(Str(#SpellBolt)) = "BOLT"
   Spells(#SpellCross) = @CrossSpell() : SpellNames(Str(#SpellCross)) = "CROSS"
-  Spells(#SpellCross) = @CrossSpell() : SpellNames(Str(#SpellCross)) = "CROSS"
   Spells(#SpellEx) = @ExSpell() : SpellNames(Str(#SpellEx)) = "EX"
   Spells(#SpellVampire) = @VampireSpell() : SpellNames(Str(#SpellVampire)) = "VAMPIRE"
   Spells(#SpellTeleport) = @TeleportSpell() : SpellNames(Str(#SpellTeleport)) = "TELEPORT"
