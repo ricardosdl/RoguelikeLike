@@ -581,10 +581,10 @@ Procedure UpdateKeyBoard()
     EndIf
   EndIf
   If GameState = "running"
-    If KeyboardReleased(#PB_Key_W) : TryPlayerMonsterMove(@Player, 0, -1) : EndIf
-    If KeyboardReleased(#PB_Key_S) : TryPlayerMonsterMove(@Player, 0, 1) : EndIf
-    If KeyboardReleased(#PB_Key_A) : TryPlayerMonsterMove(@Player, -1, 0) : EndIf
-    If KeyboardReleased(#PB_Key_D) : TryPlayerMonsterMove(@Player, 1, 0) : EndIf
+    If KeyboardReleased(#PB_Key_W) Or KeyboardReleased(#PB_Key_Up): TryPlayerMonsterMove(@Player, 0, -1) : EndIf
+    If KeyboardReleased(#PB_Key_S) Or KeyboardReleased(#PB_Key_Down) : TryPlayerMonsterMove(@Player, 0, 1) : EndIf
+    If KeyboardReleased(#PB_Key_A) Or KeyboardReleased(#PB_Key_Left) : TryPlayerMonsterMove(@Player, -1, 0) : EndIf
+    If KeyboardReleased(#PB_Key_D) Or KeyboardReleased(#PB_Key_Right) : TryPlayerMonsterMove(@Player, 1, 0) : EndIf
     If KeyboardReleased(#PB_Key_1) : CastMonsterSpell(@Player, 0)  
     ElseIf KeyboardReleased(#PB_Key_2) : CastMonsterSpell(@Player, 1)  
     ElseIf KeyboardReleased(#PB_Key_3) : CastMonsterSpell(@Player, 2)  
