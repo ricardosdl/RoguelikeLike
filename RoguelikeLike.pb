@@ -700,3 +700,18 @@ If OpenWindow(0, 0, 0, GameWidth, GameHeight, "RoguelikeLike", #PB_Window_System
     CompilerEndIf
   EndIf
 EndIf
+; IDE Options = SpiderBasic 2.31 (Windows - x86)
+; CursorPosition = 585
+; FirstLine = 572
+; Folding = ---------------
+; Markers = 30,644
+; WebAppName = RoguelikeLike
+; HtmlFilename = index.html
+; JavaScriptFilename = RoguelikeLike.js
+; JavaScriptPath = spiderbasic
+; ResourceDirectory = data\
+; CopyJavaScriptLibrary
+; iOSAppOrientation = 0
+; AndroidAppOrientation = 0
+; EnableXP
+; CompileSourceDirectory
